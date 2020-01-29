@@ -7,7 +7,6 @@ html, body {
   height: 100%;
   display: flex;
   flex-direction: row;
-  font-family: 'Alice';
   background-color: #fafafa;
   color: black;
   overflow-x: hidden;
@@ -16,7 +15,7 @@ html, body {
   background-color: #303030;
   color: white;
 }
-#app textarea, #app button, #app input {
+#app textarea, button, input {
   font-size: inherit;
   font-family: inherit;
 }
@@ -66,7 +65,7 @@ html, body {
 }
 
 /***** Scrollable center box which occupies most of the page. containing messages, etc *****/
-#messages {
+.messages {
   flex: 1 1;
   overflow-y: scroll;
   padding: 10px;
@@ -132,8 +131,6 @@ html, body {
 }
 .message .icon-button {
   margin: -9px 0 0 -8px;
-}
-.message .icon-button i.material-icons {
   opacity: 0.66;
 }
 
@@ -326,14 +323,18 @@ html, body {
   align-items: center;
   height: 100%;
   transition: background-color .4s cubic-bezier(.25,.8,.25,1);
-  cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-#send-box #click-to-change:hover {
-  background-color: rgba(128,128,128,.3);
+@media (max-width: 1023px) {
+  #send-box #click-to-change {
+    cursor: pointer;
+  }
+  #send-box #click-to-change:hover {
+    background-color: rgba(128,128,128,.3);
+  }
 }
 
 #send-box #typing-area {
@@ -375,45 +376,50 @@ html, body {
 .drawer {
   display: flex;
   flex-direction: column;
-  max-width: 80%;
+  max-width: 320px;
+  width: 80%;
   background-color: #fafafa;
   z-index: 5;
+  transition: transform 0.2s cubic-bezier(.25,.8,.25,1);
+  position: fixed;
+  top: 0;
+  bottom: 0;
 }
 .dark-theme .drawer {
   background-color: #444444;
 }
-@media (max-width: 1023px) {
+@media (max-width: 400px) {
   .drawer {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    width: 320px;
-    transition: width .4s cubic-bezier(.25,.8,.25,1);
-    box-shadow: 0 8px 10px -5px rgba(0,0,0,.2), 0 16px 24px 2px rgba(0,0,0,.14), 0 6px 30px 5px rgba(0,0,0,.12)
-  }
-  .drawer.drawer-right {
-    right: 0;
-  }
-  .drawer.drawer-left {
-    left: 0;
+    transition: transform 0.4s cubic-bezier(.25,.8,.25,1);
   }
 }
+.drawer.drawer-right {
+  right: 0;
+}
+.drawer.drawer-left {
+  left: 0;
+}
+.drawer.open {
+  box-shadow: 0 8px 10px -5px rgba(0,0,0,.2), 0 16px 24px 2px rgba(0,0,0,.14), 0 6px 30px 5px rgba(0,0,0,.12);
+  transform: translate(0px, 0px);
+}
+.drawer.drawer-right:not(.open) {
+  transform: translate(320px, 0px)
+}
+.drawer.drawer-left:not(.open){
+  transform: translate(-320px, 0px)
+}
 @media (min-width: 1024px) {
-  .drawer:not(.drawer-dock-1024) {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    width: 320px;
-    transition: width .4s cubic-bezier(.25,.8,.25,1);
-    box-shadow: 0 8px 10px -5px rgba(0,0,0,.2), 0 16px 24px 2px rgba(0,0,0,.14), 0 6px 30px 5px rgba(0,0,0,.12)
-  }
-  .drawer.drawer-right:not(.drawer-dock-1024) {
-    right: 0;
-  }
-  .drawer.drawer-left:not(.drawer-dock-1024) {
-    left: 0;
-  }
   .drawer.drawer-dock-1024 {
+    position: unset;
+    top: unset;
+    bottom: unset;
+    left: unset;
+    right: unset;
+    width: unset;
+    box-shadow: unset;
+    z-index: 4;
+    transform: unset !important;
     flex: 0 0 320px;
   }
   .drawer.drawer-dock-1024.drawer-right {
@@ -422,34 +428,29 @@ html, body {
   .drawer.drawer-dock-1024.drawer-left {
     order: -1;
   }
-}
-.v-enter-active.drawer, .v-leave-active.drawer {
-  transition: transform 0.2s cubic-bezier(.25,.8,.25,1);
-}
-@media (max-width: 400px) {
-  .v-enter-active.drawer, .v-leave-active.drawer {
-    transition: transform 0.4s cubic-bezier(.25,.8,.25,1);
+  .drawer.drawer-dock-1024 .close-button {
+    display: none;
   }
 }
-.v-enter.drawer.drawer-right, .v-leave-to.drawer.drawer-right {
-  transform: translate(320px, 0px)
-}
-.v-enter.drawer.drawer-left, .v-leave-to.drawer.drawer-left {
-  transform: translate(-320px, 0px)
-}
-.drawer .drawer-header {
-  padding: 0 16px;
+
+.drawer-header {
+  padding: 0 20px;
   height: 64px;
   min-height: 64px;
   line-height: 64px;
   font-size: 24px;
   display: flex;
   align-items: center;
+  position: relative;
 }
-.drawer .drawer-header span:first-child {
-  flex-grow: 1;
+.drawer-header .close-button {
+  position: absolute;
+  right: -4px;
+  top: 0;
+  height: 64px;
+  width: 64px;
 }
-.drawer .drawer-body {
+.drawer-body {
   display: flex;
   padding-top: 8px;
   overflow-x: hidden;
@@ -457,48 +458,59 @@ html, body {
   flex-direction: column;
   flex-grow: 1;
 }
-.drawer .drawer-item {
-  width: 100%;
-  height: 48px;
-  min-height: 48px;
-  padding: 0 16px;
-  font-size: 16px;
-  background: none;
+.drawer-body > hr {
   border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  color: inherit;
-  text-decoration: none;
-  box-sizing: border-box;
-}
-.drawer .drawer-item.drawer-item-selected {
-  border-left: solid 3px black;
-}
-.dark-theme .drawer .drawer-item.drawer-item-selected {
-  border-left: solid 3px white;
-}
-.drawer .drawer-item > i.material-icons:first-child {
-  padding-right: 16px;
-}
-.drawer .drawer-item > i.material-icons:last-child {
-  padding-right: 8px;
-}
-.drawer .drawer-item span {
-  flex-grow: 1;
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.drawer .drawer-divider {
   border-top: solid 1px;
   border-top-color: rgba(0,0,0,.12);
   display: block;
   margin: 0;
 }
-.dark-theme .drawer .drawer-divider {
+.dark-theme .drawer-body > hr {
   border-top-color: rgba(255,255,255,.12);
+}
+.drawer-body > :not(hr) {
+  /* reset */
+  background: none;
+  border: none;
+  text-align: left;
+  color: inherit;
+  text-decoration: none;
+  box-sizing: border-box;
+  /* styles */
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  line-height: 48px;
+  padding: 0 40px 0 20px;
+  font-size: 16px;
+  cursor: pointer;
+  display: block;
+  position: relative;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.drawer-body > :not(hr):first-letter {
+  font-size: 22px;
+  transform: translateY(52px);
+  letter-spacing: 8px;
+}
+.drawer-body > * > input[type="checkbox"] {
+  position: absolute;
+  right: 20px;
+  top: 18px;
+}
+.drawer-body > * > button,
+.drawer-header > * > button {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+}
+.drawer-body > .selected {
+  box-shadow: inset 10px 0 5px -5px rgba(0, 0, 0, 0.5);
+}
+.dark-theme .drawer-body > .selected {
+  box-shadow: inset 10px 0 5px -5px rgba(255, 255, 255, 0.5);
 }
 
 /***** DIALOG BOXES *****/
@@ -535,13 +547,14 @@ html, body {
   align-items: center;
   color: white;
 }
-.v-enter-active .overlay, .v-leave-active .overlay {
+.drawer .overlay {
   transition: opacity 0.2s cubic-bezier(.25,.8,.25,1);
+  opacity: 1;
 }
-.v-enter .overlay, .v-leave-to .overlay {
+.drawer:not(.open) .overlay {
   opacity: 0;
+  width: 0;
 }
-
 .dark-theme .overlay {
   background-color: rgba(189,189,189,.6);
   color: black;
@@ -569,6 +582,9 @@ html, body {
 }
 
 /***** ICON BUTTONS: icons you can click on, used throughout the page *****/
+.emoji {
+  font-size: 20px;
+}
 .icon-button {
   color: inherit;
   background: none;
@@ -584,12 +600,13 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
+  font-size: 28px;
+}
+.icon-button .emoji {
+  font-size: 22px;
 }
 .icon-button:active {
   background-color: rgba(128,128,128,.3);
-}
-.icon-button i.material-icons {
-  color: inherit;
 }
 .icon-button:disabled {
   cursor: auto;
@@ -597,11 +614,12 @@ html, body {
 }
 
 /***** CHARA ICONS, the subtle shadows so the colored icons for charas don't blend into the background *****/
-i.chara-icon-shadow {
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+.chara-icon-shadow {
+  font-size: 28px;
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.6);
 }
-.dark-theme i.chara-icon-shadow {
-  text-shadow: 1px 1px 0 rgba(255,255,255,0.3);
+.dark-theme .chara-icon-shadow {
+  text-shadow: 1px 1px 1px rgba(255,255,255,0.6);
 }
 
 /***** PRETTY OUTLINED BUTTONS *****/
@@ -730,19 +748,19 @@ i.chara-icon-shadow {
 }
 
 /***** NOTICE THAT SHOWS WHEN YOU HAVE A LONG RP, and you can't see it all on the chat page *****/
-#archive-advice {
+.notice {
   font-style: italic;
   margin: 3vh auto 0;
   padding: 10px;
   text-align: center;
 }
-#archive-advice a {
+.notice a {
   text-decoration: none;
   border-bottom: 1px dotted rgb(124, 77, 255);
   color: rgb(124, 77, 255);
   opacity: 0.87;
 }
-.dark-theme #archive-advice a {
+.dark-theme .notice a {
   color: rgb(255,193,7);
   border-bottom-color: rgb(255,193,7);
 }
@@ -757,15 +775,13 @@ i.chara-icon-shadow {
   color: white;
   background-color: orange;
 }
-#connection-indicator i.material-icons {
-  margin-right: 5px;
-}
 
 
 /***** PAGE NUMBER LINKS on the archive index *****/
-#archive-index {
+#page-dialog {
   max-width: 600px;
-  margin: 2vh auto 0;
+  margin: 1vh auto 0;
+  padding-bottom: 3vh;
 }
 .page-number-link {
   width: 60px;
@@ -799,26 +815,10 @@ i.chara-icon-shadow {
   box-shadow:2px 2px 4px rgba(0,0,0,0.03);
 }
 
-/***** Format guide *****/
-#format-guide {
-  margin: auto;
-  width: 400px;
-  max-width: 80%;
-  top: 10vh;
-  max-height: 60vh;
-  overflow-y: scroll;
-  padding: 10px 30px;
-}
-
 /***** Import page *****/
 #import-page {
   padding: 20px;
 }
 #import-page h1 {
   margin: 0 0 20px;
-}
-#import-page i.material-icons {
-  font-size: 32px;
-  height: 32px;
-  width: 32px;
 }

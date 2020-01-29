@@ -1,19 +1,15 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
-const Busboy = require('busboy');
+const fs = require('fs');
 const { generateTextFile } = require('./services/txt-file');
 const { exportRp, importRp } = require('./services/json-file');
-const cuid = require('cuid');
-const DB = require('./services/database');
-const { validate } = require('./services/validate-user-documents');
-const { generateAnonCredentials, authMiddleware } = require('./services/anon-credentials');
+const Store = require('./services/storage');
+const validate = require('./services/validate-user-documents');
+const { generateToken, authMiddleware, checkPasscode } = require('./services/auth')(process.env.PASSCODE);
 const discordWebhooks = require('./services/discord-webhooks');
 
 // Express is our HTTP server
 const server = express();
-
-// trust Glitch.com's reverse proxy that sits in front of this server
-server.set('trust proxy', true);
 
 // Add x-robots-tag header to all pages served by app 
 server.use((req, res, next) => {
@@ -30,22 +26,43 @@ server.use((req, res, next) => {
   }
 });
 
+// Attach prefetch headers to load frontend files more quickly
+const prefetchHeader = [
+  ...fs.readdirSync('web/components').map(f => `components/${f}`),
+  ...fs.readdirSync('web')
+].filter(f => f.endsWith('.js') || f.endsWith('.css'))
+.map(f => {
+  const type = ({js:'script',css:'style'})[f.split('.').pop()];
+  return `<${f}>; rel=prefetch; as=${type}`;
+})
+.join(', ');
+
+server.get('/', (req, res, next) => {
+  res.set('Link', prefetchHeader);
+  next();
+})
+
 // Serve frontend HTML, etc
-server.use('/', express.static('views'));
+server.use('/', express.static('web', { index: 'index2.html' }));
+
+// DB tables
+const db = Store('./.data/db');
+
+const Msgs = db.group('m-', validate.msg)
+const Charas = db.group('c-', validate.chara)
+const Webhooks = db.group('webhook-', validate.webhook)
+const getTitle = () => (db.find('title') || { title: 'My New Story' }).title;
+const setTitle = (title) => db.put({ _id: 'title', title });
 
 // API
 const api = new express.Router();
 server.use('/api', api);
-api.use(express.json({ limit: '500mb' }));
 api.use(cookieParser());
 api.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache');
   next();
 })
-api.use(authMiddleware.unless({path: ['/user/anon']}))
-
-// TODO store in database
-let title = 'My New Story'
+api.use(authMiddleware.unless({path: ['/api/auth']}))
 
 const rpListeners = new Set();
 
@@ -53,227 +70,219 @@ function broadcast(obj) {
   rpListeners.forEach(fn => fn(obj))
 }
 
-// helper function to wrap up an async function to be used in Express
-function awrap(fn) {
-  return function asyncWrapper(...args) {
-    const next = args[args.length - 1];
-    return fn(...args).catch(next);
-  }
-}
-
 /**
  * Generate a new set of credentials for an anonymous user
  */
-// TODO establish new way of authentication
-api.post('/user/anon', awrap(async (req, res, next) => {
-  const credentials = generateAnonCredentials();
-  res.cookie('usertoken', credentials.token, {
-    // path: '/api',
-    maxAge: 1000 * 60 * 60 * 24 * 90, // 90 days
-    httpOnly: true,
-    secure: true,
-    // sameSite: 'strict',
-  })
-  res.status(200).json(credentials);
-}));
+api.post('/auth', express.json(), (req, res, next) => {
+  if (!process.env.ALLOW_NEW_USERS || !['true', 'yes', 'y'].includes(process.env.ALLOW_NEW_USERS.toLowerCase())) {
+    return res.status(403).json({ error: 'New logins not permitted' })
+  }
+  checkPasscode(req.body.passcode).then(correct => {
+    if (!correct) {
+      return res.status(401).json({ error: 'Wrong passcode' })
+    }
+
+    const credentials = generateToken(req.body.passcode);
+
+    res.cookie('usertoken', credentials.token, {
+      path: '/api',
+      maxAge: 1000 * 60 * 60 * 24 * 365 * 5, // 5 years
+      httpOnly: true,
+      secure: true,
+      // sameSite: 'strict',
+    })
+
+    res.status(200).json(credentials);
+  }).catch(next);
+});
 
 /**
  * Import RP from JSON
  */
 let importStatus = null;
 
-api.post('/rp/import', awrap(async (req, res, next) => {
+api.post('/rp/import', (req, res, next) => {
   const { userid } = req.user;
-  const ip = req.ip;
+  
+  // forbid import when RP is not empty
+  if (Msgs.count() > 0) {
+    return res.sendStatus(409) // conflict
+  }
+  
+  req.on('end', () => {
+    importStatus = { status: 'pending' };
+    res.sendStatus(202);
+  });
 
-  const busboy = new Busboy({ headers: req.headers });
-
-  busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
-    if (fieldname !== 'file') return file.resume();
-
-    file.on('end', () => {
-      importStatus = { status: 'pending' };
-      res.sendStatus(202);
-    });
-
-    importRp(userid, ip, file, async (err) => {
+  importRp(req, { userid }, {
+    addMsgs(msgs) {
+      console.log(msgs);
+      // return Msgs.put(...msgs);
+    },
+    addCharas(charas) {
+      console.log(charas);
+      return Charas.put(...charas);
+    },
+    setTitle(title) {
+      console.log(title);
+      return setTitle(title);
+    },
+    onComplete(err) {
+      // TODO notify chat ?
       if (err) {
         importStatus = { status: 'error', error: err.message };
       } else  {
         importStatus = { status: 'success' };              
       }
-
-    });
+    }
   });
-
-  return req.pipe(busboy);
-}));
-
-api.get('/rp/import', awrap(async (req, res, next) => {
-  if (!importStatus) return res.status(404).json({ error: 'Import expired' })
-  return res.status(200).json(importStatus);
-}));
+});
 
 /**
  * RP Chat Stream
  */
-api.get('/rp/chat', awrap(async (req, res, next) => {
-  const send = obj => res.write(JSON.stringify(obj)+'\n')
-  
-  res.on("close", () => rpListeners.delete(send));
+api.get('/rp/chat', (req, res, next) => {
+  const send = (...objs) => res.write(objs.map(obj => JSON.stringify(obj)).join('\n')+'\n')
   
   // TODO if import is in progress, send notice and then wait
 
-  const snapshot = await DB.lastEventId();
-  const msgs = await DB.getDocs('msgs', { reverse: true, limit: 60, snapshot }).asArray();
-  msgs.reverse();
-  const charas = await DB.getDocs('charas', { snapshot }).asArray();
+  const msgs = Msgs.list({ reverse: true, limit: 60 }).reverse();
+  const charas = Charas.list();
+  const title = getTitle();
   
-  send({
-    type: 'init',
-    data: { title, msgs, charas }
-  });
+  send(
+    ({ type: 'title', data: title }),
+    ...charas.map(data => ({ type: 'charas', data })),
+    ...msgs.map(data => ({ type: 'msgs', data })),
+  );
   
   rpListeners.add(send);
-}));
-
-/**
- * Count the pages in an RP's archive
- */
-api.get(`/rp/pages`, awrap(async (req, res, next) => {
-  const msgCount = await DB.getDocs('msgs').count();
-  const pageCount = Math.ceil(msgCount / 20);
-
-  res.status(200).json({ title, pageCount })
-}));
+  res.on("close", () => rpListeners.delete(send));
+});
 
 /**
  * Get a page from an RP's archive
  */
-api.get(`/rp/pages/:pageNum([1-9][0-9]{0,})`, awrap(async (req, res, next) => {
+api.get('/rp/pages/:pageNum([1-9][0-9]{0,})', (req, res, next) => {
+  const msgCount = Msgs.count();
+  const pageCount = Math.ceil(msgCount / 20);
+  
   const skip = (req.params.pageNum - 1) * 20;
   const limit = 20;
+  const msgs = Msgs.list({ skip, limit });
 
-  const snapshot = await DB.lastEventId();
-  const msgs = await DB.getDocs('msgs', { skip, limit, snapshot }).asArray();
-  const charas = await DB.getDocs('charas', { snapshot }).asArray();
-
-  const msgCount = await DB.getDocs('msgs').count();
-  const pageCount = Math.ceil(msgCount / 20);
-
-  res.status(200).json({ title, msgs, charas, pageCount })
-}));
+  res.status(200).json({ msgs, pageCount })
+});
 
 /**
  * Get and download a .txt file for an entire RP
  */
-api.get(`/rp/download.txt`, awrap(async (req, res, next) => {
-  // TODO getting all msgs at once is potentially problematic for huge RP's; consider using streams if possible
-  const msgs = await DB.getDocs('msgs').asArray(); 
-  const charasMap = await DB.getDocs('charas').asMap();
+api.get('/rp/download.txt', (req, res, next) => {
+  const msgs = Msgs.iterator();
+  const charas = Charas.list();
+  const title = getTitle();
   const { includeOOC = false } = req.query;
 
   res.attachment(`${title}.txt`).type('.txt');
-  generateTextFile({ title, msgs, charasMap, includeOOC }, str => res.write(str));
+  generateTextFile({ title, msgs, charas, includeOOC }, str => res.write(str));
   res.end();
-}));
+});
 
 /**
  * Get and download a .txt file for an entire RP
  */
-api.get(`/rp/export`, awrap(async (req, res, next) => {
-  res.attachment(`${title}.json`).type('.json');
-  await exportRp(str => res.write(str));
-  res.end();
-}));
-
-/**
- * Create something in an RP (message, chara, etc)
- */
-api.post(`/rp/:collection(msgs|charas)`, awrap(async (req, res, next) => {
-  const collection = req.params.collection;
-  const _id = cuid();
-  const fields = req.body;
-  await validate(collection, fields);
-  const { userid } = req.user;
-  const ip = req.ip;
-
-  const { doc } = await DB.addDoc(collection, _id, fields, { userid, ip });
-
-  broadcast({ type: collection, data: doc })
+api.get('/rp/export', (req, res, next) => {
+  const msgs = Msgs.iterator();
+  const charas = Charas.list();
+  const title = getTitle();
   
-  if (collection === 'msgs') {
-    discordWebhooks.send(title, fields);
-  }
-
-  res.status(201).json(doc);
-}));
+  res.attachment(`${title}.json`).type('.json');
+  exportRp({ title, msgs, charas }, str => res.write(str));
+  res.end();
+});
 
 /**
- * Update something in an RP (message, chara, etc)
+ * Add/update msg
  */
-api.put(`/rp/:collection(msgs|charas)/:doc_id([a-z0-9]+)`, awrap(async (req, res, next) => {
-  const collection = req.params.collection;
-  const _id = req.params.doc_id;
-  const fields = req.body;
-  await validate(collection, fields);
+api.put('/rp/msgs', express.json(), (req, res, next) => {
   const { userid } = req.user;
-  const ip = req.ip;
+  const timestamp = new Date().toISOString();
+  const obj = { ...req.body, userid, timestamp };
 
-  const oldDoc = await DB.getDoc(collection, _id);
-  if (!oldDoc) return res.sendStatus(404);
-
-  const { doc } = await DB.updateDoc(collection, _id, fields, { userid, ip });
-
-  broadcast({ type: collection, data: doc })
+  const [doc] = Msgs.put(obj);
+  broadcast({ type: 'msgs', data: doc })
 
   res.status(200).json(doc);
-}));
+  
+  if (!obj._id) { // if adding a new msg, send webhook 
+    try {
+      const webhooks = Webhooks.list().map(obj => obj.webhook);
+      const chara = obj.charaId && Charas.find(obj.charaId);
+      const title = getTitle();
+      discordWebhooks.send(webhooks, title, obj, chara);
+    } catch (err) {
+      // don't crash client response, just log it
+      console.info(err);
+    }
+  }
+});
 
 /**
- * Get the history of something in an RP (message, chara, etc)
+ * Add/update chara
  */
-api.get(`/rp/:collection(msgs|charas)/:doc_id([a-z0-9]+)/history`, awrap(async (req, res, next) => {
-  const collection = req.params.collection;
-  const _id = req.params.doc_id;
+api.put('/rp/charas', express.json(), (req, res, next) => {
+  const { userid } = req.user;
+  const timestamp = new Date().toISOString();
+  const obj = { ...req.body, userid, timestamp };
 
-  const docs = await DB.getDocs(collection, { _id, includeHistory: true }).asArray();
+  const [doc] = Charas.put(obj);
+  broadcast({ type: 'charas', data: doc })
 
-  res.status(200).json(docs);
-}));
+  res.status(200).json(doc);
+});
+
+/**
+ * Add webhook
+ */
+api.put('/rp/webhook', express.json(), (req, res, next) => {
+  const { userid } = req.user;
+  const { webhook } = req.body;
+  
+  if (Webhooks.list().find(doc => doc.webhook === webhook)) {
+    return res.status(400).json({ error: 'That webhook was already added'});
+  }
+  
+  Webhooks.put({ webhook, userid });
+  
+  res.sendStatus(204);
+});
 
 /**
  * Update RP title
  */
-api.put(`/rp/title`, awrap(async (req, res, next) => {
-  const newTitle = req.body
+api.put('/rp/title', express.json(), (req, res, next) => {
+  const title = req.body
     && req.body.title
     && (typeof req.body.title === 'string')
     && req.body.title.length < 30
     && req.body.title;
   
-  if (newTitle) {
-    title = newTitle;
-    broadcast({ type: 'title', data: title })
-    res.sendStatus(204);
-  } else {
-    next(new Error('invalid title'))
+  if (!title) {
+    throw new Error('invalid title');
   }
-}));
+  
+  setTitle(title);
+  broadcast({ type: 'title', data: title })
+  res.sendStatus(204);
+});
 
 /**
- * Add webhook
- */
-api.put(`/rp/webhook`, awrap(async (req, res, next) => {
-  const { webhook } = req.body;
-  if (typeof webhook !== 'string') return res.status(400).json({ error: "No webhook provided" })
-  
-  await discordWebhooks.test(webhook);
-  
-  await DB.addDoc('webhooks', webhook, { webhook });
-  
-  res.sendStatus(204);
-}));
+ * Get the history of something in an RP (message, chara, etc)
+ */ 
+api.get('/rp/msgs/:doc_id([a-z0-9-]+)/history', (req, res, next) => {
+  const _id = req.params.doc_id;
+  res.status(200).json(Msgs.history(_id));
+});
 
 /**
  * Default route (route not found)
@@ -286,10 +295,10 @@ api.all('*', (req, res, next) => {
  * Error handling
  */
 api.use((err, req, res, next) => {
-  console.error(err);
   if (err.name === 'UnauthorizedError') {
     res.status(401).json({ error: err.message });
   } else {
+    console.error(err);
     res.status(400).json({ error: err.message });
   }
 });
@@ -300,6 +309,6 @@ const listener = server.listen(process.env.PORT || 13000, (err) => {
     console.error(`Failed to start: ${err}`);
     process.exit(1);
   } else {
-    console.log("Your app is listening on port " + listener.address().port);
+    console.info("Your app is listening on port " + listener.address().port);
   }
 });

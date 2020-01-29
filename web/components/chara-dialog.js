@@ -1,5 +1,3 @@
-const jQuery = window.jQuery
-
 export default {
   template: `
     <div class="dialog-container overlay" @click="close" v-show="showing || isDialogSending">
@@ -18,8 +16,7 @@ export default {
       </div>
 
       <template v-if="isDialogSending">
-        <i class="material-icons">hourglass_full</i>
-        <span>Loading...</span>
+        <span class="emoji">⏳</span> Loading...
       </template>
 
     </div>
@@ -28,7 +25,7 @@ export default {
   props: [
     'send',
   ],
-  data() {
+  data () {
     return {
       showing: false,
       charaDialogId: null,
@@ -43,7 +40,7 @@ export default {
     },
   },
   methods: {
-    open(chara) {
+    open (chara) {
       if (chara != null) {
         this.charaDialogId = chara._id;
         this.charaDialogName = chara.name;
@@ -55,15 +52,18 @@ export default {
       }
       this.showing = true;
     },
-    close() {
+    close () {
       if (!this.isDialogSending) {
         this.showing = false;
       }
     },
-    submit() {
+    submit () {
+      var _this = this;
+      
       if (!this.isValid) return;
 
-      const data = {
+      var data = {
+        _id: this.charaDialogId,
         name: this.charaDialogName,
         color: this.charaDialogColor,
       };
@@ -71,40 +71,25 @@ export default {
       this.showing = false;
       this.isDialogSending = true;
 
-      this.send(data, this.charaDialogId)
-        .then(res => {
-          if (this.charaDialogId) {
-            this.$emit('edited', res);
+      this.send(data)
+        .then(function (res) {
+          if (_this.charaDialogId) {
+            _this.$emit('edited', res);
           } else {
-            this.$emit('created', res);
+            _this.$emit('created', res);
           }
-          this.isDialogSending = false;
+          _this.isDialogSending = false;
         })
-        .catch(() => {
-          this.isDialogSending = false;
+        .catch(function () {
+          _this.isDialogSending = false;
         });
     }
   },
   components: {
-    'spectrum-colorpicker': {
-      props: ['value'],
-      render: h => h('input', { ref: 'colorpicker' }),
-      mounted() {
-        const emitInput = (color) => this.$emit('input', color.toHexString());
-        jQuery(this.$refs.colorpicker).spectrum({
-          color: this.value,
-          showInput: true,
-          preferredFormat: "hex",
-          move: emitInput,
-          change: emitInput,
-          hide: emitInput,
-        });
-      },
-      watch: {
-        value(value) {
-          jQuery(this.$refs.colorpicker).spectrum('set', value);
-        }
-      }
+    'spectrum-colorpicker': function () {
+      return import('./spectrum-colorpicker.js').then(function(module) {
+        return module.default;
+      })
     }
   }
 };

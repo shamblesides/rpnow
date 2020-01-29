@@ -1,6 +1,6 @@
-const tinycolor = window.tinycolor;
-import ImageDialog from './image-dialog.js';
+ import ImageDialog from './image-dialog.js';
 import transformRpMessage from './rp-message-format.js';
+import getContrast from './contrast.js';
 
 function colorFromId(id) {
   // hash id into 32-bit integer
@@ -13,17 +13,19 @@ function colorFromId(id) {
 
   // take 3 groups of 3 rgb components of 3 bits (27 bits total) and make colors
   return [0, 9, 18]
-    .map(n => hash >> n & ((1<<9)-1))
-    .map(n => {
+    .map(function (off) {
+      var n = hash >> off & ((1<<9)-1)
       return '#'+[n, (n / 8 | 0), (n / 64 | 0)]
-        .map(n => ('0'+(n % 8 * 31).toString(16)).substr(-2))
+        .map(function (n) {
+          return ('0'+(n % 8 * 31).toString(16)).substr(-2)
+        })
         .join('')
     });
 }
 
 export default {
   template: `
-    <div :class="elementClasses" :style="{ backgroundColor: charaColor, color: charaColorBw }">
+    <div :class="elementClasses" :style="isChara ? { backgroundColor: charaColor, color: charaColorBw } : null">
 
       <div v-if="isChara" class="name">{{ charaName }}</div>
 
@@ -41,17 +43,13 @@ export default {
 
       <div class="action-buttons">
         <template v-if="!editing">
-          <button v-if="canEdit" class="icon-button" @click="beginEdit">
-            <i class="material-icons" title="Edit">edit</i>
+          <button v-if="canEdit" class="icon-button" @click="beginEdit" title="Edit">
+            ✎
           </button>
         </template>
         <template v-if="editing">
-          <button class="icon-button" :disabled="!validEdit" @click="confirmEdit">
-            <i class="material-icons" title="Save edits">save</i>
-          </button>
-          <button class="icon-button" @click="cancelEdit">
-            <i class="material-icons" title="Discard edits">cancel</i>
-          </button>
+          <button class="icon-button" :disabled="!validEdit" @click="confirmEdit">➔</button>
+          <button class="icon-button" @click="cancelEdit">✘</button>
         </template>
       </div>
 
@@ -89,23 +87,22 @@ export default {
           </div>
         </div>
         <template v-else>
-          <i class="material-icons">hourglass_full</i>
-          <span>Loading...</span>
+          <span class="emoji">⏳</span> Loading...
         </template>
       </div>
 
     </div>
   `,
   components: {
-    ImageDialog
+    'image-dialog': ImageDialog
   },
   props: [
     '_id',
+    '_rev',
     'type',
     'content',
     'url',
     'timestamp',
-    'revision',
     'userid',
 
     'chara',
@@ -131,8 +128,8 @@ export default {
     isOOC() { return this.type === 'ooc' },
     isChara() { return this.type === 'chara' },
     isImage() { return this.type === 'image' },
-    charaColor() { return this.isChara ? this.chara.color : null },
-    charaName() { return this.isChara ? this.chara.name : null },
+    charaColor() { return this.chara ? this.chara.color : '#888888' },
+    charaName() { return this.chara ? this.chara.name : '???' },
     elementClasses() {
       return [
         'message',
@@ -153,10 +150,10 @@ export default {
     },
     charaColorBw() {
       if (!this.isChara) return null;
-      return tinycolor(this.charaColor).isLight() ? 'black' : 'white';
+      return getContrast(this.charaColor);
     },
     wasEdited() {
-      return this.revision > 0;
+      return this._rev > 1;
     },
     timeAgoText() {
       // close enough
@@ -200,30 +197,28 @@ export default {
     confirmEdit() {
       this.editing = false;
       var messageData = {
+        _id: this._id,
         type: this.type,
         charaId: this.chara && this.chara._id || undefined,
         content: this.newContent,
       }
-      this.send(messageData, this._id);
+      this.send(messageData);
     },
     notifySizeChange() {
       this.$emit('resize');
     },
     showHistory() {
       this.historyOpen = true;
-      this.getHistory().then(data => this.history = data);
+      var _this = this;
+      this.getHistory().then(function (data) { _this.history = data });
     },
     transformRpMessage: transformRpMessage,
   },
   mounted() {
-    this.intervalHandle = setInterval(() => this.currentTime = Date.now(), 15*1000);
-
-    this.notifySizeChange();
+    var _this = this;
+    this.intervalHandle = setInterval(function () { _this.currentTime = Date.now() }, 15*1000);
   },
   watch: {
-    type: 'notifySizeChange',
-    content: 'notifySizeChange',
-    url: 'notifySizeChange',
     editing: 'notifySizeChange',
   },
   beforeDestroy() {

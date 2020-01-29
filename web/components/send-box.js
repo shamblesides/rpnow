@@ -1,26 +1,20 @@
-const tinycolor = window.tinycolor;
 import ImageDialog from './image-dialog.js';
-import FormatDialog from './format-dialog.js';
+import getContrast from './contrast.js';
 
 export default  {
   template: `
-    <div v-if="!charasById"></div>
-
-    <div v-else id="send-box" :class="messageBoxClass" :style="messageBoxStyle">
+    <div id="send-box" :class="messageBoxClass" :style="messageBoxStyle">
 
       <div id="voice-bar">
         <div id="click-to-change" title="Change character" @click="$emit('open-character-menu')">
           {{ currentVoiceName }}
         </div>
-        <button class="icon-button" @click="$emit('open-character-menu')">
-          <i class="material-icons" title="Change character">people</i>
-        </button>
         <button class="icon-button" @click="$refs.imageDialog.open(null)">
-          <i class="material-icons" title="Post image">image</i>
+          <span class="emoji">🖼️</span>
         </button>
-        <button class="icon-button" @click="$refs.formatDialog.open()">
-          <i class="material-icons" title="Formatting info">text_fields</i>
-        </button>
+        <a href="/format.html" target="_blank" class="icon-button">
+          <span class="emoji">📝</span>
+        </a>
       </div>
 
       <div id="typing-area">
@@ -36,25 +30,22 @@ export default  {
         ></textarea>
         <template v-if="!isMsgBoxSending">
           <button class="icon-button" :disabled="!msgBoxValid" @click="submit">
-            <i class="material-icons" title="Send">send</i>
+            ➤
           </button>
         </template>
         <template v-if="isMsgBoxSending">
           <div id="send-loader-container">
-            <i class="material-icons">hourglass_full</i>
+            <span class="emoji">⏳</span>
           </div>
         </template>
       </div>
 
       <image-dialog ref="imageDialog" :send="send"></image-dialog>
 
-      <format-dialog ref="formatDialog" />
-
     </div>
   `,
   components: {
-    FormatDialog,
-    ImageDialog,
+    'image-dialog': ImageDialog,
   },
   props: [
     'charasById',
@@ -89,7 +80,7 @@ export default  {
       if (this.voice.type !== 'chara') return {};
       else return {
         'background-color': this.currentCharaColor,
-        'color': tinycolor(this.currentCharaColor).isLight() ? 'black' : 'white',
+        'color': getContrast(this.currentCharaColor),
       };
     },
     msgBoxValid() {
@@ -129,14 +120,15 @@ export default  {
 
       this.isMsgBoxSending = true;
 
+      var _this = this;
       this.send(data)
-        .then(() => {
-          this.msgBoxText = '';
-          this.isMsgBoxSending = false;
-          if (wasFocused) this.$nextTick(() => document.querySelector('#typing-area textarea').focus());
+        .then(function () {
+          _this.msgBoxText = '';
+          _this.isMsgBoxSending = false;
+          if (wasFocused) _this.$nextTick(function () { document.querySelector('#typing-area textarea').focus() });
         })
-        .catch(() => {
-          this.isMsgBoxSending = false;
+        .catch(function () {
+          _this.isMsgBoxSending = false;
         });
     },
     resizeTextareaOnInput($event, minRows, maxRows) {

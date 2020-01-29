@@ -1,14 +1,11 @@
 /**
- * The format of RP files is tentatively going to be a large JSON array
- * The first element of the array is going to be { version, title, charas }
+ * The format of RP files is a large JSON array
+ * The first element of the array is { version, title, charas }
  * The remaining documents will be messages
  */
 
 const { Writable, Transform } = require('stream');
 const JSONStream = require('JSONStream');
-const cuid = require('cuid');
-const DB = require('../services/database');
-const { validate } = require('../services/validate-user-documents');
 
 class BatchStream extends Transform {
   constructor(options) {
@@ -34,24 +31,25 @@ class BatchStream extends Transform {
 }
 
 module.exports = ({
-  async exportRp(write) {
-    const { title } = { title: "TITLE" }
-    // TODO getting all msgs at once is potentially problematic for huge RP's; consider using streams if possible
-    let msgs = await DB.getDocs('msgs').asArray(); 
-    let charas = await DB.getDocs('charas').asArray();
+  exportRp({ title, msgs, charas }, write) {
     // TODO export webhooks?
 
     const charaIdMap = charas.reduce((map,{_id},i) => map.set(_id,i), new Map());
 
     charas = charas.map(({ timestamp, name, color }) => ({ timestamp, name, color }))
-    msgs = msgs.map(({ timestamp, type, content, url, charaId }) => ({ timestamp, type, content, url, charaId: charaIdMap.get(charaId)}))
 
-    write(`[\n${JSON.stringify({ title, charas })}`);
-    msgs.forEach(msg => write(`,\n${JSON.stringify(msg)}`));
+    write(`[\n${JSON.stringify({ version: 1, title, charas })}`);
+    
+    for (const msgRaw of msgs) {
+      const { timestamp, type, content, url, charaId } = msgRaw;
+      const msg = { timestamp, type, content, url, charaId: charaIdMap.get(charaId) };
+      write(`,\n${JSON.stringify(msg)}`)
+    }
+    
     write('\n]\n');
   },
 
-  async importRp(userid, ip, rawStream, callback) {
+  importRp(rawStream, { userid, batchSize=1000 }, { addMsgs, addCharas, setTitle, onComplete }) {
     let handledMeta = false;
     const charaIdMap = new Map();
     // TODO import webhooks
@@ -71,23 +69,16 @@ module.exports = ({
           }
 
           let { charas, title } = chunk;
-          // TODO add title
-          // await validate('meta', meta); // TODO or throw BAD_RP
-          // await DB.addDoc('meta', 'meta', meta, { userid, ip });
+          
+          await setTitle(title);
 
-          // elevate body above timestamp
-          charas = charas.map(({ timestamp, ...body }) => ({ timestamp, body }))
+          // add userid
+          charas = charas.map((body) => ({ ...body, userid }));
 
-          // validate bodies
-          await Promise.all(charas.map(({ body }) => validate('charas', body)));
-
-          // add other meta
-          charas = charas.map((doc) => ({ _id: cuid(), userid, ip, ...doc }))
+          charas = await addCharas(charas);
           
           // populate charaIdMap
-          charas.forEach(({ _id }, i) => charaIdMap.set(i, _id))
-
-          await DB.addDocs('charas', charas);
+          charas.forEach((chara, i) => charaIdMap.set(i, chara._id))
 
           handledMeta = true;
           callback();
@@ -97,48 +88,34 @@ module.exports = ({
       // The remaining elements are messages. Batch them to be processed in groups
       .pipe(new BatchStream({
         objectMode: true,
-        bufferSize: 1000,
+        bufferSize: batchSize,
       }))
       
       // Add each message to the database
       .pipe(new Transform({
         objectMode: true,
         async write(msgs, encoding, callback) {
-          // hydrate charaId
-          msgs = msgs.map(({ charaId, ...body }) => {
-            if (charaId == null) return body;
-            return { ...body, charaId: charaIdMap.get(charaId) };
-          })
-          // chop content to 10000 length
-          msgs = msgs.map(({ content, ...body }) => {
-            if (content == null) return body;
-            if (content.length <= 10000) return { ...body, content };
-            return { ...body, content: content.substr(0, 10000) };
-          })
-          // elevate body above timestamp
-          msgs = msgs.map(({ timestamp, ...body }) => ({ timestamp, body }))
+          // hydrate msg
+          msgs = msgs.map((body) => {
+            if (body.charaId != null) {
+              body.charaId = charaIdMap.get(body.charaId);
+            }
+            if (body.content != null) {
+              body.content = body.content.substr(0, 10000);
+            }
+            body.userid = body.userid || userid;
+            return body;
+          });
 
-          // validate bodies
-          await Promise.all(msgs.map(({ body }) => validate('msgs', body)));
-
-          // add other meta
-          msgs = msgs.map((doc) => ({ _id: cuid(), userid, ip, ...doc }))
-
-          await DB.addDocs('msgs', msgs);
-          this.push(msgs.length);
-          callback();
-        }
-      }))
-
-      .pipe(new Writable({ 
-        objectMode: true,
-        write(info, encoding, callback) {
-          this.count = (this.count || 0) + info;
+          await addMsgs(msgs);
+          
           callback();
         }
       }))
 
       // Done!
-      .on('finish', () => callback());
+      .on('finish', () => onComplete());
+    
+      // TODO handle errors in here
   },
 });

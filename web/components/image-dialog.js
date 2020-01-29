@@ -13,8 +13,7 @@ export default {
         </div>
 
         <div class="preview-container preview-container-busted" v-if="imageDialogIsChecking">
-          <i class="material-icons">hourglass_full</i>
-          <span>Loading...</span>
+          <span class="emoji">⏳</span> Loading...
         </div>
 
         <div class="preview-container" v-if="imageDialogIsValid">
@@ -34,8 +33,7 @@ export default {
       </div>
 
       <template v-if="isDialogSending">
-        <i class="material-icons">hourglass_full</i>
-        <span>Loading...</span>
+        <span class="emoji">⏳</span> Loading...
       </template>
 
     </div>
@@ -43,7 +41,7 @@ export default {
   props: [
     'send',
   ],
-  data() {
+  data () {
     return {
       // image post dialog
       showImageDialog: false,
@@ -55,7 +53,7 @@ export default {
     };
   },
   methods: {
-    open(msg) {
+    open (msg) {
       if (msg != null) {
         this.imageDialogId = msg._id;
         this.imageDialogUrl = msg.url;
@@ -65,10 +63,11 @@ export default {
       }
       this.showImageDialog = true;
     },
-    submit() {
+    submit () {
       if (!this.imageDialogIsValid) return;
 
-      const data = {
+      var data = {
+        _id: this.imageDialogId,
         type: 'image',
         url: this.imageDialogUrl,
       };
@@ -76,18 +75,19 @@ export default {
       this.showImageDialog = false;
       this.isDialogSending = true;
 
-      this.send(data, this.imageDialogId)
-        .then(() => {
-          this.isDialogSending = false;
+      var _this = this;
+      this.send(data)
+        .then(function () {
+          _this.isDialogSending = false;
         })
-        .catch(() => {
-          this.isDialogSending = false;
+        .catch(function () {
+          _this.isDialogSending = false;
         });
     }
   },
   watch: {
     // validate the image dialog to see if an image can actually be loaded
-    imageDialogUrl(url) {
+    imageDialogUrl (url) {
       if (!this.$refs.urlbox.checkValidity()) {
         this.imageDialogIsChecking = false;
         this.imageDialogIsValid = false;
@@ -97,21 +97,22 @@ export default {
       this.imageDialogIsChecking = true;
       this.imageDialogIsValid = false;
 
-      new Promise((resolve) => {
-        const img = document.createElement('img');
+      var _this = this;
+      new Promise(function (resolve) {
+        var img = document.createElement('img');
 
-        img.addEventListener('load', () => resolve(true));
-        img.addEventListener('error', () => resolve(false));
-        img.addEventListener('abort', () => resolve(false));
-        setTimeout(() => resolve(false), 45000);
+        img.addEventListener('load', function() { resolve(true) });
+        img.addEventListener('error', function() { resolve(false) });
+        img.addEventListener('abort', function() { resolve(false) });
+        setTimeout(function() { resolve(false) }, 45000);
 
         img.src = url;
-      }).then((result) => {
+      }).then(function (result) {
         // ignore if another change has happened since this one
-        if (this.imageDialogUrl !== url) return;
+        if (_this.imageDialogUrl !== url) return;
 
-        this.imageDialogIsChecking = false;
-        this.imageDialogIsValid = result;
+        _this.imageDialogIsChecking = false;
+        _this.imageDialogIsValid = result;
       });
     },
   },
