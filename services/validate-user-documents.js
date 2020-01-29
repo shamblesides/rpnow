@@ -1,91 +1,80 @@
-const DB = require('./database');
-
-const isString = str => typeof str === 'string';
-const isStringMaxLength = length => str => isString(str) && str.length <= length;
-const matchRegex = regex => str => isString(str) && str.match(regex) !== null;
+const is = (value) => function (x) {
+  if (x !== value) throw new Error(`isn't <${value}>`);
+}
+const isString = (length) => function (str) {
+  if (typeof str !== 'string') throw new Error('is not a string');
+  if (str.length > length) throw new Error(`too long: ${str.length} chars`)
+}
+const matchRegex = (regex) => function (str) {
+  if (typeof str !== 'string') throw new Error('is not a string');
+  if (str.match(regex) === null) throw new Error('does not match pattern')
+}
 const isUrl = matchRegex(/^https?:\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]+$/gi);
-const isOneOf = (...values) => str => values.includes(str);
-const is = isOneOf;
-const all = (...fns) => async (...args) => {
-  for (const fn of fns) {
-    if (!await fn(...args)) return false;
-  }
-  return true;
-};
-const any = (...fns) => async (...args) => {
-  for (const fn of fns) {
-    if (await fn(...args)) return true;
-  }
-  return false;
-};
 
-const validators = {
-  msgs: [
-    {
-      type: is('image'),
-      url: isUrl,
-    },
-    {
-      type: is('chara'),
-      content: isStringMaxLength(10000),
-      charaId: async (charaId) => {
-        if (typeof charaId !== 'string') return false;
-        return DB.hasDoc('charas', charaId)
-      },
-    },
-    {
-      type: isOneOf('narrator', 'ooc'),
-      content: isStringMaxLength(10000),
+const timestamp = matchRegex(/^\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+Z$/);
+
+const obj = (shape) => function (o) {
+  if (typeof o !== 'object') throw new Error('not an object');
+  for (const [key, isValid] of Object.entries(shape)) {
+    try {
+      isValid(o[key]);
+    } catch (err) {
+      throw new Error(`{ ${key}: ${err.message} }`);
     }
-  ],
-  charas: [
-    {
-      name: isStringMaxLength(30),
-      color: matchRegex(/^#[0-9a-f]{6}$/g),
-    }
-  ]
-};
-
-module.exports = {
-  async validate(collection, body) {
-    // Only JS objects can be validated here
-    if (typeof body !== 'object') throw new Error("Tried to validate a non-object")
-
-    // Get the validator(s) for the specified collection
-    const validatorGroup = validators[collection];
-    if (!validatorGroup) throw new Error('Invalid collection');
-
-    // Iterate through the array of possible validators for this collection
-    // Only one of them has to succeed
-    for (const possibleValidator of validatorGroup) {
-      let failed = false;
-      // Make sure every property passes its test
-      for (const prop of Object.keys(possibleValidator)) {
-        const propTester = possibleValidator[prop]
-        const isPropValid = await propTester(body[prop]);
-        if (isPropValid === true) {
-          continue;
-        }
-        else if (isPropValid === false) {
-          failed = true;
-          break;
-        }
-        else {
-          throw new Error("Validator working incorrectly");
-        }
-      }
-      // If any property failed, try the next validator option
-      if (failed) {
-        continue;
-      }
-      // Make sure there's no extra properties
-      if (!Object.keys(body).every(prop => possibleValidator[prop] != null)) {
-        continue;
-      }
-      // This validator worked. Success
-      return true;
-    }
-    // No validators in this group worked. Fail
-    throw new Error(`Invalid object on ${collection}: ${JSON.stringify(body)}`);
   }
-};
+  const reservedKeys = ['_id', '_rev'];
+  for (const key of Object.keys(o)) {
+    if (!reservedKeys.includes(key) && !(key in shape)) {
+      throw new Error(`{ ${key}: extra prop }`);
+    }
+  }
+}
+
+const any = (...ways) => function (o) {
+  let errs = [];
+  for (const way of ways) {
+    try {
+      way(o);
+      return;
+    } catch (err) {
+      errs.push(err.message);
+    }
+  }
+  throw new Error('no matches: ' + errs.join('; '));
+}
+
+const userid = isString(40);
+
+module.exports.msg = any(
+  obj({
+    type: is('image'),
+    url: isUrl,
+    userid,
+    timestamp,
+  }),
+  obj({
+    type: is('chara'),
+    content: isString(10000),
+    charaId: isString(8),
+    userid,
+    timestamp,
+  }),
+  obj({
+    type: any(is('narrator'), is('ooc')),
+    content: isString(10000),
+    userid,
+    timestamp,
+  })
+);
+
+module.exports.chara = obj({
+  name: isString(30),
+  color: matchRegex(/^#[0-9a-f]{6}$/g),
+  userid,
+  timestamp,
+});
+  
+module.exports.webhook = obj({
+  webhook: matchRegex(/^https:\/\/discordapp.com\/api\/webhooks\/[\w/]+/),
+  userid,
+});

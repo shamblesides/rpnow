@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="My RP">
+  <link rel="icon" sizes="32x32" href="favicon/favicon-32x32.png">
+  <link rel="icon" sizes="128x128" href="favicon/favicon-128x128.png">
+  <link rel="apple-touch-icon" href="favicon/favicon-128x128.png">
+  <link rel="stylesheet" href="styles2.css">
+  <title>Loading...</title>
+  <noscript><style>.js-only { display: none !important; }</style></noscript>
+</head>
+
+<header>
+  <button onclick="toggle('main-menu')">≡</button>
+  <h1 id="title"></h1>
+</header>
+
+<main></main>
+
+<template id="msg">
+  <div class="message chara-bg">
+    <time></time>
+    <button class="history-button">history</button>
+    <button class="edit-button">✎</button>
+    <button class="confirm-edit-button">➔</button>
+    <button class="cancel-edit-button">✘</button>
+    <div class="chara-name"></div>
+    <blockquote></blockquote>
+    <textarea maxlength="10000" onkeydown="quicksend(event)"></textarea>
+  </div>
+</template>
+
+<form id="send-box" class="chara-bg c-00001">
+  <button type="button" id="change-chara" onclick="toggle('character-menu')">Change</button>
+  <button type="button" class="icon-button">🖼️</button>
+  <a href="./format.html" target="_blank" class="icon-button">📝</a>
+  <textarea name="content" rows="3" maxlength="10000" required placeholder="Type your message." onkeydown="quicksend(event)" oninput="autosizeTextarea(event, 3, 6)"></textarea>
+  <button type="submit">➤</button> <!-- ⏳ -->
+</form>
+
+<section id="main-menu" class="drawer drawer-left">
+  <div class="overlay overlay-drawer" onclick="closeMe(event)"></div>
+
+  <header>
+    <h2>Menu</h2>
+    <button class="icon-button close-button" onclick="closeMe(event)" title="Close">×</button>
+  </header>
+  
+  <div class="drawer-body">
+    <a href="#1" class="drawer-item" v-if="!pageNumber" onclick="closeMe(event)">
+      📚 Browse archive
+    </a>
+    <a href="#" class="drawer-item" v-if="pageNumber" onclick="closeMe(event)">
+      ✍️ Back to chat
+    </a>
+    <button class="drawer-item">
+      📃 Download .TXT
+    </button>
+    <hr/>
+    <button class="drawer-item" onclick="openTitleDialog()">
+      📓 Change title...
+    </button>
+    <button class="drawer-item" onclick="openWebhookDialog()">
+      🌐 Add Discord webhook...
+    </button>
+    <a class="drawer-item" href="/api/rp/export" target="_blank">
+      🗄️ Export data
+    </a>
+    <hr/>
+    <label>
+      🌒 Night mode
+      <input type="checkbox" data-rember="nightMode" oninput="darkMode(event.target.checked)"/>
+    </label>
+    <label class="drawer-item">
+      🔈 Audio Alerts
+      <input type="checkbox" data-rember="audioAlerts"/>
+    </label>
+    <label class="drawer-item">
+      🔔 Desktop Alerts
+      <input type="checkbox" data-rember="browserAlerts"/>
+    </label>
+    <label class="drawer-item">
+      ⏩ Quick send
+      <input type="checkbox" id="quicksend" data-rember="quicksend"/>
+    </label>
+  </div>
+</section>
+
+<section id="character-menu" class="drawer drawer-right drawer-dock-1024" >
+  <div class="overlay overlay-drawer" onclick="closeMe(event)"></div>
+
+  <header>
+    <h2>Characters</h2>
+    <button class="icon-button close-button" onclick="closeMe(event)" title="Close">×</button>
+  </header>
+  
+  <div class="drawer-body">
+    <button :class="{'selected': currentVoice.type==='narrator'}" @click="selectCharacter('narrator')">
+      📖 Narrator
+    </button>
+    <button :class="{'selected': currentVoice.type==='ooc'}" @click="selectCharacter('ooc')">
+      💬 Out of Character
+    </button>
+    <hr/>
+    <button @click="$refs.charaDialog.open(null)">
+      🆕 New Character...
+    </button>
+    <hr/>
+  </div>
+</section>
+
+<template id="chara-button">
+  <div @click="selectCharacter('chara', chara._id)">
+    <span class="chara-text chara-icon-shadow">⚉</span>
+    <span class="chara-name"></span>
+    <button class="icon-button" @click.prevent.stop="$refs.charaDialog.open(chara)">✎</button>
+  </div>
+</template>
+
+<!-- TODO Chara dialog -->
+
+<!-- TODO Image dialog -->
+
+<!-- TODO History dialog -->
+
+<!-- TODO Archive page -->
+
+<!-- TODO Page dialog -->
+
+<!-- TODO Download dialog -->
+
+<!-- TODO Import (dialog?) -->
+
+<!-- TODO Alerts -->
+
+<!-- Polyfills -->
+<script src="https://cdn.jsdelivr.net/npm/text-encoding@0.7.0/lib/encoding.js" integrity="sha256-E9b12NeEmrVSXHs978RmbR1TsqL7+Xd+tHA5lWzi0Mc=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/whatwg-fetch@3.0.0/dist/fetch.umd.js" integrity="sha256-mgxDAbboBKeoCOtpaU7QhWdgWBGum+8dPxnIjiC97JI=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/web-streams-polyfill@2.0.6/dist/polyfill.min.js" integrity="sha256-zAIrVOzXBA0qU8c/qYEjWbrGXGaRofFgf44jqGCCVEI=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/fetch-readablestream@0.2.0/dist/fetch-readablestream.js" integrity="sha256-4BecP76XqkCxNLLYAOlCkG7KbILJ9Be1rjZ4ylNXY+Q=" crossorigin="anonymous"></script>
+
+<script>
+  function toggle(selector) {
+    document.getElementById(selector).classList.toggle('open')
+  }
+  function closeMe(event) {
+    event.target.closest('.drawer, .dialog-container').classList.remove('open');
+  }
+  function darkMode(isDark) {
+    document.body.classList.toggle('dark-theme', isDark);
+  }
+  function openTitleDialog() {
+    var title = prompt('Enter the title for this RP:', document.getElementById('title').innerText);
+    if (title != null) {
+      RP.changeTitle(title);
+    }
+  }
+  function openWebhookDialog() {
+    var webhook = prompt('Webhook URL, please:');
+    if (webhook) {
+      RP.addWebhook(webhook)
+      .then(function () {
+        alert('Webhook added successfully')
+      })
+    }
+  }
+</script>
+
+<script>
+  document.querySelectorAll('input[data-rember]').forEach(function (input) {
+    var storageKey = 'rpsettings.' + input.dataset.rember;
+    var inputProp = (input.type === 'checkbox') ? 'checked' : 'value';
+    input.addEventListener('input', function() {
+      localStorage.setItem(storageKey, input[inputProp]);
+    });
+    if (localStorage.getItem(storageKey) != null) {
+      if (input.type === 'checkbox') {
+        input.checked = (localStorage.getItem(storageKey) === 'true');
+      } else {
+        input.value = localStorage.getItem(storageKey);
+      }
+      input.dispatchEvent(new Event('input'));
+    }
+  });
+</script>
+
+<script src="rp.js"></script>
+<script src="format-rp-message.js"></script>
+
+<script>
+  RP.initialize({
+    title(title) {
+      document.title = title;
+      document.getElementById('title').innerText = title;
+    },
+    chara(data) {
+      function contrast(color) {
+        var rgb = color.match(/\w\w/g).map(function(n) { return parseInt(n, 16) });
+        var brightness = (rgb[0]*299 + rgb[1]*587 + rgb[2]*114);
+        return (brightness < 128*1000) ? 'white' : 'black';
+      }
+      // Generate styles
+      var style = document.createElement('style');
+      style.id = 'styles-' + data._id;
+      style.innerHTML = `
+        .${data._id}.chara-bg,
+        .${data._id} .chara-bg {
+          color: ${contrast(data.color)};
+          background-color: ${data.color};
+        }
+        .${data._id}.chara-text,
+        .${data._id} .chara-text {
+          color: ${data.color};
+        }
+        .${data._id}.chara-name::before,
+        .${data._id} .chara-name::before {
+          content: "hiya";
+        }`
+      // Add to document head
+      if (document.getElementById(style.id)) {
+        document.getElementById(style.id).replaceWith(style);
+      } else {
+        document.head.appendChild(style);
+      }
+      // Build chara select button
+      var el = document.querySelector('template#chara-button').content.cloneNode(true).querySelector('*');
+      el.id = data._id;
+      el.classList.add(data._id);
+      el.querySelector('.chara-name').innerText = data.name;
+      // Add to document
+      if (document.getElementById(el.id)) {
+        document.getElementById(el.id).replaceWith(el);
+      } else {
+        document.querySelector('#character-menu .drawer-body').appendChild(el);
+      }
+    },
+    msg(data) {
+      // Build message
+      var el = document.querySelector('template#msg').content.cloneNode(true).querySelector('*');
+      el.id = data._id;
+      el.dataset.rev = data._rev;
+      el.classList.add(data.type);
+      if (data.charaId) el.classList.add(data.charaId);
+      el.querySelector('time').innerText = new Date(data.timestamp)[(data.timestamp < new Date(Date.now()-1000*60*60*24).toJSON()) ? 'toLocaleDateString' : 'toLocaleTimeString']();
+      el.querySelector('time').datetime = data.timestamp;
+      el.querySelector('textarea').innerText = data.content;
+      el.querySelector('blockquote').innerHTML = formatRpMessage(data.content);
+      // Add to document
+      if (document.getElementById(el.id)) {
+        document.getElementById(el.id).replaceWith(el);
+      } else {
+        document.querySelector('main').appendChild(el);
+        
+        // scroll page to bottom
+        // TODO but only if we're already at the bottom...
+        window.scrollBy(0, 999999);
+      }
+    },
+    error(err, fatal) {
+      // TODO error handlin
+    }
+  })
+</script>
+  
+<script>
+  // This is a bunch of stuff for the auto-resizing of the textbox
+  
+  function autosizeTextarea(event, minRows, maxRows) {
+    var el = event.target;
+    while (el.rows > minRows && el.scrollHeight <= el.offsetHeight) {
+      el.rows = el.rows - 1;
+    }
+    while (el.rows < maxRows && el.scrollHeight > el.offsetHeight) {
+      el.rows = el.rows + 1;
+    }
+  }
+  
+  window.requestAnimationFrame((function update(lastHeight) {
+    var height = document.querySelector('#send-box').clientHeight;
+    if (height !== lastHeight) {
+      document.querySelector('main').style.marginBottom = (height + 30)+'px';
+      window.scrollBy(0, height-lastHeight);
+    }
+    window.requestAnimationFrame(update.bind(null, height));
+  }).bind(null, 0));
+</script>
+
+<script>
+  // Press enter to send
+  function quicksend(event) {
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    
+    if (event.ctrlKey || document.querySelector('#quicksend').checked) {
+      event.preventDefault();
+      event.target.closest('form').submit();
+    }
+  }
+</script>

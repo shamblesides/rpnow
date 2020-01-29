@@ -1,34 +1,24 @@
 const https = require('https');
 const url = require('url');
-const DB = require('./database');
 
 function httpsPost(urlString, bodyObj) {
-  return new Promise((resolve, reject) => {
-    const bodyString = JSON.stringify(bodyObj);
-    const req = https.request(
-      {
-        ...url.parse(urlString),
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': bodyString.length
-        }
-      },
-    );
-    req.on('response', response => {
-      if (response.statusCode >= 200 && response.statusCode <= 299) resolve();
-      else reject();
-    })
-    req.write(bodyString);
-    req.end();
-  });
+  const bodyString = JSON.stringify(bodyObj);
+  const req = https.request(
+    {
+      ...url.parse(urlString),
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': bodyString.length
+      }
+    },
+  );
+  req.write(bodyString);
+  req.end();
 }
 
 module.exports = {
-  async test(webhook) {
-    const reply = await httpsPost(webhook, {"content":"Webhook test successful"})
-  },
-  async send(title, msg) {
+  send(webhooks, title, msg, chara) {
     const embed = {
       footer: {
         text: title
@@ -39,16 +29,14 @@ module.exports = {
     if (msg.type === 'image') {
       embed.title = 'New image post';
     } else {
-      let bodyText = '';
-      if (msg.type === 'chara') {
-        const chara = await DB.getDoc('charas', msg.charaId)
-        bodyText += chara.name + ': ';
+      if (chara) {
         embed.color = parseInt(chara.color.slice(1), 16);
-      } else if (msg.type === "narrator") {
-        bodyText += "Narrator: "
-      } else if (msg.type === "ooc") {
-        bodyText += "OOC: "
       }
+      
+      let bodyText = '';
+      bodyText += (chara && chara.name) || ({narrator:'Narrator', ooc:'OOC'})[msg.type] || '???';
+      bodyText += ': ';
+      
       if (msg.content.length > 20) {
         bodyText += msg.content.slice(0, 20) + "..."
       } else {
@@ -59,7 +47,7 @@ module.exports = {
 
     const body = { embeds: [embed] };
 
-    for (const { webhook } of await DB.getDocs('webhooks').asArray()) {
+    for (const webhook of webhooks) {
       httpsPost(webhook, body);
     }
   }

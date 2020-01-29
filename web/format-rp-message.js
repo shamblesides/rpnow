@@ -1,19 +1,11 @@
-const tinycolor = window.tinycolor;
-
-export default function transformRpMessage(str, color) {
+window.formatRpMessage = function formatRpMessage(str) {
   // how to render a specific type of tag
   var renderTag = {
-    'ACTION': {
-      open: function(color) {
-        var contrast = color ? (tinycolor(color).isLight() ? 'black' : 'white') : 'auto';
-        return '<span class="message-star-tag" style="background-color:'+color+'; color:'+contrast+'">*';
-      },
-      close: '*</span>'
-    },
-    'BOLD': { open: function() { return '<b>' }, close: '</b>' },
-    'ITC': { open: function() { return '<i>' }, close: '</i>' },
-    'BOLDITC': { open: function() { return '<b><i>' }, close: '</i></b>' },
-    'STRIKE': { open: function() { return '<del>' }, close: '</del>' },
+    'ACTION': { open: '<span class="message-star-tag chara-bg">', close: '</span>' },
+    'BOLD': { open: '<b>', close: '</b>' },
+    'ITC': { open: '<i>', close: '</i>' },
+    'BOLDITC': { open: '<b><i>', close: '</i></b>' },
+    'STRIKE': { open: '<del>', close: '</del>' },
   };
 
   function escape(str) {
@@ -24,7 +16,7 @@ export default function transformRpMessage(str, color) {
 
   // tokens that create tags
   var tagLexers = [
-    { r: /^(https?:\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/i, replace: function(link) { return '<a href="'+link+'" target="_blank">'+link+'</a>'; } },
+    { r: /^(https?:\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/i, replace(link) { return '<a href="'+link+'" target="_blank">'+link+'</a>'; } },
     { r: /^(____+)/ }, // if there's a lot of _, don't treat it as anything
     { r: /^(\/\/+)/ }, // same with lots of /
     { r: /^(___)/, tag: 'BOLDITC' },
@@ -34,7 +26,7 @@ export default function transformRpMessage(str, color) {
     { r: /^(~~)/, tag: 'STRIKE' },
     { r: /^(\*)/, tag: 'ACTION' },
     { r: /^(\r\n|\n\r|\r|\n)/, replaceWith: '<br>' },
-    { r: /^(--)/, replaceWith: '&mdash;' },
+    { r: /^(--)/, replaceWith: '—' },
     { r: /^(\s)/ },
     { r: /^(\S[^\s-]*[^\s_/~*-,.?!"])(?:\s|$)/, replace: escape }, // attempt to ignore symbols like /, _, etc inside of words
     { r: /^(.)/, replace: escape },
@@ -78,7 +70,7 @@ export default function transformRpMessage(str, color) {
           tokens[idx] = t.match;
         });
         // apply both tags
-        tokens[tokens.indexOf(opener)] = renderTag[tag].open(color);
+        tokens[tokens.indexOf(opener)] = renderTag[tag].open;
         tokens.push(renderTag[tag].close);
         // pop stack
         tagTokenStack = tagTokenStack.slice(0, openerStackIdx);

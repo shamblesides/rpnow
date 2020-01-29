@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="My RP">
+  <link rel="icon" sizes="32x32" href="favicon/favicon-32x32.png">
+  <link rel="icon" sizes="128x128" href="favicon/favicon-128x128.png">
+  <link rel="apple-touch-icon" href="favicon/favicon-128x128.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>Loading...</title>
+  <noscript><style>.js-only { display: none !important; }</style></noscript>
+</head>
+
+<div id="app">
+  <!-- Minimal shell to make the loading screen look similar to the app as it is loaded -->
+  <div id="main-column">
+    <div id="chat-header"></div>
+    <div id="messages">
+      <noscript>
+        <div class="notice">
+          You must enable javascript to use this site.
+        </div>
+      </noscript>
+      <div class="notice js-only">
+        <span class="emoji">⏳</span> Loading application...
+      </div>
+    </div>
+  </div>
+  <div id="haracter-menu" class="drawer drawer-right drawer-dock-1024">
+    <div class="drawer-header">
+      <span>Characters</span>
+    </div>
+    <div class="drawer-body"></div>
+  </div>
+</div>
+
+<script>
+  // immediately apply dark mode setting to loading screen
+  try {
+    var val = JSON.parse(localStorage.getItem('rpnow.nightMode'));
+    document.getElementById('app').classList.toggle('dark-theme', val);
+  } catch (err) {}
+</script>
+
+<script>
+  
+  // We will be dynamically adding polyfills to this page
+  
+  function addScriptTag(src, integrity, dataset) {
+    var s = document.createElement('script');
+    s.src = src;
+    if (integrity) s.integrity = integrity;
+    if (dataset) Object.assign(s.dataset, dataset);
+    s.crossOrigin = 'anonymous';
+    s.defer = true;
+    document.body.appendChild(s);
+  }
+  
+  // A bunch of polyfills!
+  
+  try { TextEncoder } catch (ex) {
+    addScriptTag(
+      "https://cdn.jsdelivr.net/npm/text-encoding@0.7.0/lib/encoding.js",
+      "sha256-E9b12NeEmrVSXHs978RmbR1TsqL7+Xd+tHA5lWzi0Mc="
+    );
+  }
+  try { fetch } catch (ex) {
+    addScriptTag(
+      "https://cdn.jsdelivr.net/npm/whatwg-fetch@3.0.0/dist/fetch.umd.js",
+      "sha256-mgxDAbboBKeoCOtpaU7QhWdgWBGum+8dPxnIjiC97JI="
+    );
+  }
+  try { ReadableStream } catch (ex) {
+    addScriptTag(
+      "https://cdn.jsdelivr.net/npm/web-streams-polyfill@2.0.6/dist/polyfill.min.js",
+      "sha256-zAIrVOzXBA0qU8c/qYEjWbrGXGaRofFgf44jqGCCVEI="
+    );
+  }
+  try { Response.prototype.body } catch (ex) {
+    addScriptTag(
+      "https://cdn.jsdelivr.net/npm/fetch-readablestream@0.2.0/dist/fetch-readablestream.js",
+      "sha256-4BecP76XqkCxNLLYAOlCkG7KbILJ9Be1rjZ4ylNXY+Q="
+    );
+  }
+  
+  // Load main.js, using shimport if necessary for browsers without ES6 modules
+  // (This limits us to an odd syntax where we want to support ES5 browsers but can still use the ES6 module system)
+  
+  try {
+    new Function('import("./main.js")')()
+  } catch (ex) {
+    addScriptTag(
+      "https://cdn.jsdelivr.net/npm/shimport@1.0.1/index.js",
+      "sha256-5dlrmz8rgQgD4A3xwojOIsdWd8WR5iMpM+dM7sTeMik=",
+      { main: "./main.js" }
+    );
+  }
+  
+</script>
