@@ -1,15 +1,28 @@
+// TODO consider using XHR instead of fetch, so we drop 4 polyfills
+
 window.RP = (function() {
   var exports = {};
+  
+  var utf8 = new TextDecoder();
 
   var JSON_HEADERS = { 'Content-Type': 'application/json' };
 
   var RESPONSE_OK = function (response) {
     if (response.ok) {
-      return response
+      return response;
     } else {
-      return response.text()
+      // Compatibility layer for when this is applied to a polyfilled fetchStream
+      // If we stop polyfilling fetch, we can safely assume ('text' in response) === true
+      return (
+        ('text' in response)
+        ? response.text()
+        : (function readmore (reader) {
+            return reader.read().then(function (chunk) {
+              return chunk.done ? '' : readmore(reader).then(function(str) { return utf8.decode(chunk.value) + str });
+            })
+          }(response.body.getReader()))
+      )
       .then(function (data) {
-        var err = null;
         try {
           return JSON.parse(data).error || data;
         } catch (parseErr) {
@@ -17,7 +30,9 @@ window.RP = (function() {
         }
       })
       .then(function (text) {
-        throw new Error(`${response.status} ${response.statusText} - ${text}`);
+        var err = new Error(`${response.status} ${response.statusText} - ${text}`);
+        err.response = response;
+        throw err;
       })
     }
   };
@@ -33,14 +48,9 @@ window.RP = (function() {
     var fetch = nativeFetchStreams ? window.fetch : window.fetchStream;
     // console.log('Native fetch streams? ' + nativeFetchStreams)
 
-    return fetch(url).then(function(response) {
-      if (!response.ok) {
-        var err = new Error(response.status + ' ' + response.statusText)
-        err.response = response;
-        throw err;
-      }
-
-      var utf8 = new TextDecoder();
+    return fetch(url)
+    .then(RESPONSE_OK)
+    .then(function(response) {
       var reader = response.body.getReader();
       var partial = '';
 
@@ -68,22 +78,25 @@ window.RP = (function() {
     })
   }
 
-  function auth() {
+  function auth(name) {
     var passcode = prompt('Please enter the passcode for this room:');
     if (passcode == null) {
       return Promise.reject(new Error('Unauthorized'));
     }
+    while (!name) {
+      name = prompt('And what is your name? (as in you, the writer?)')
+    }
     return fetch('/api/auth', {
       method: 'POST',
       headers: JSON_HEADERS,
-      body: JSON.stringify({ passcode: passcode }),
+      body: JSON.stringify({ passcode: passcode, name: name }),
     })
     .then(function (res) {
       return res.json().then(function (json) {
         if (!res.ok) {
           var retry = confirm(`Error: ${json.error}. Retry?`)
           if (retry) {
-            return auth();
+            return auth(name);
           } else {
             throw new Error(json.error);
           }
@@ -92,29 +105,43 @@ window.RP = (function() {
     });
   }
 
-  exports.initialize = function initialize(callbacks) {
+  exports.initialize = function initialize(page, callbacks) {
+    var retry = initialize.bind(null, page, callbacks);
+    
+    var oninit = callbacks.init;
     var onmsg = callbacks.msg;
     var onchara = callbacks.chara;
     var ontitle = callbacks.title;
+    var onuser = callbacks.user;
     var onerror = callbacks.error;
-    jsonStream('/api/rp/chat', function(update) {
-      if (update.type === 'title') {
+    
+    jsonStream(`/api/rp?page=${page}`, function(update) {
+      if (update.type === 'init') {
+        oninit(update.data);
+      } else if (update.type === 'title') {
         ontitle(update.data);
       } else if (update.type === 'msgs') {
         onmsg(update.data);
       } else if (update.type === 'charas') {
         onchara(update.data);
+      } else if (update.type === 'users') {
+        onuser(update.data);
+      } else if (update.type === 'reload') {
+        location.reload();
       }
     })
     .catch(function (err) {
       if (err.response && err.response.status === 401) {
-        auth().then(initialize.bind(null, callbacks))
+        auth()
+        .then(retry)
         .catch(function (err) {
           onerror(err, true)
         });
+      } else if (err.response && err.response.ok === false) {
+        onerror(err, true);
       } else {
         onerror(err, false);
-        setTimeout(initialize.bind(null, callbacks), 2000);
+        setTimeout(retry, 6000);
       }
     })
   }
@@ -165,13 +192,6 @@ window.RP = (function() {
       body: JSON.stringify({ webhook: webhook }),
     })
     .then(RESPONSE_OK)
-    .catch(ALERT_ERROR);
-  }
-
-  exports.getPage = function getPage(pageNumber) {
-    return fetch('/api/rp/pages/' + pageNumber)
-    .then(RESPONSE_OK)
-    .then(function (response) { return response.json() })
     .catch(ALERT_ERROR);
   }
 

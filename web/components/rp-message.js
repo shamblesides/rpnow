@@ -1,27 +1,4 @@
- import ImageDialog from './image-dialog.js';
-import transformRpMessage from './rp-message-format.js';
-import getContrast from './contrast.js';
 
-function colorFromId(id) {
-  // hash id into 32-bit integer
-  var hash = 0, i, chr;
-  for (i = 0; i < id.length; i++) {
-    chr   = id.charCodeAt(i);
-    hash  = ((hash << 5) - hash) + chr;
-    hash |= 0; // Convert to 32bit integer
-  }
-
-  // take 3 groups of 3 rgb components of 3 bits (27 bits total) and make colors
-  return [0, 9, 18]
-    .map(function (off) {
-      var n = hash >> off & ((1<<9)-1)
-      return '#'+[n, (n / 8 | 0), (n / 64 | 0)]
-        .map(function (n) {
-          return ('0'+(n % 8 * 31).toString(16)).substr(-2)
-        })
-        .join('')
-    });
-}
 
 export default {
   template: `

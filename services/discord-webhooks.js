@@ -28,13 +28,13 @@ module.exports = {
 
     if (msg.type === 'image') {
       embed.title = 'New image post';
-    } else {
+    } else if (msg.type === 'text') {
       if (chara) {
         embed.color = parseInt(chara.color.slice(1), 16);
       }
       
       let bodyText = '';
-      bodyText += (chara && chara.name) || ({narrator:'Narrator', ooc:'OOC'})[msg.type] || '???';
+      bodyText += (chara && chara.name) || ({narrator:'Narrator', ooc:'OOC'})[msg.who] || '???';
       bodyText += ': ';
       
       if (msg.content.length > 20) {

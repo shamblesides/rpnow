@@ -4,14 +4,16 @@ textarea, button, input {
 }
 button {
   border: 0;
-  padding: 8px;
   cursor: pointer;
+  color: inherit;
+  background-color: transparent;
 }
 form:invalid button[type="submit"], button:disabled {
   cursor: unset;
 }
 body {
-  margin: 80px 0 0;
+  margin: 0;
+  padding-top: 80px;
   overflow-x: hidden;
   background-color: #fafafa;
   color: black;
@@ -21,14 +23,45 @@ body.dark-theme {
   color: white;
 }
 
+a {
+  word-break: break-word;
+  text-decoration: none;
+  color: #7c4dff;
+  border-bottom: 1px dotted #7c4dff;
+}
+.dark-theme a {
+  color: #ffc107;
+  border-bottom-color: #ffc107;
+}
+a.button {
+  display: inline-block;
+  color: inherit;
+  border-bottom: unset;
+  text-align: center;
+  vertical-align: middle;
+}
+
+
+/*******
+Because index.html functions as both the chat page and the
+archive page, we basically just use data-page=chat|archive
+to determine elements that should show up on only one of
+those pages. This hides all specific elements until the
+JS removes all irrelevant elements, and then removes the
+data-page attribute from every element.
+********/
+[data-page] {
+  display: none !important;
+}
+
 header {
   position: fixed;
   top: 0;
   width: 100%;
   height: 64px;
-  padding: 0 16px;
+  padding: 0 4px;
   background-color: inherit;
-  z-index: 3;
+  z-index: 30;
   display: flex;
   align-items: center;
   box-sizing: border-box;
@@ -40,14 +73,73 @@ header {
 header h1, header h2 {
   font-size: 24px;
   flex-grow: 1;
+  padding: 0 16px;
 }
-header button {
+header button, header a.button {
+  font-size: 32px;
   height: 56px;
+  line-height: 56px;
   width: 56px;
+  padding: 0;
+}
+
+#pager {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  padding: 5px;
+  z-index: 29;
+  text-align: center;
+  background-color: #eee;
+  box-shadow: 0 0 10px rgba(0,0,0,.1);
+}
+.dark-theme #pager {
+  background-color: #555;
+}
+#pager form {
+  display: inline-block;
+}
+#pager input {
+  width: 3rem;
+  text-align: right;
+}
+#pager a:not([href]) {
+  visibility: hidden;
+}
+
+aside.error {
+  display: block;
+  position: fixed;
+  top: 40px;
+  left: 0;
+  right: 0;
+  margin: auto;
+  max-width: 300px;
+  padding: 10px;
+  color: white;
+  background-color: orange;
+  z-index: 35;
+}
+aside.error:empty {
+  display: none;
 }
 
 main {
-  padding: 0 3%;
+  padding: 0 3% 0;
+}
+#pager ~ main {
+  padding-top: 40px;
+}
+
+#no-messages:not(:only-child) {
+  display: none;
+}
+
+.notice {
+  margin: 3vh auto 0;
+  padding: 10px;
+  text-align: center;
 }
 
 /***** RP MESSAGES *****/
@@ -63,50 +155,51 @@ main {
   line-height: 1.6;
   margin: 0;
 }
-.message:not(.editing) textarea,
-.message:not(.editing) .confirm-edit-button,
-.message:not(.editing) .cancel-edit-button,
+.message textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+.message:not(.editing) form,
+.message.editing .edit-button,
+.message.editing blockquote,
 .message[data-rev="1"] .history-button,
-.message:not(.chara) .chara-name {
+.message:not([data-who|=c]) .chara-name {
   display: none;
 }
 .message .edit-button {
   position: absolute;
   top: 1px;
-  right: 48px;
+  right: 25px;
+  opacity: 0.5;
 }
 .message .history-button {
   position: absolute;
-  top: 1px;
-  right: 80px;
-}
-.message time {
-  position: absolute;
-  top: 10px;
-  right: 160px;
+  top: 0px;
+  right: 55px;
+  opacity: 0.5;
 }
 /** N a r r a t o r **/
-.message.narrator {
+.message[data-who=narrator] {
   background-color: white;
   border: 1px solid #999;
   border-radius: 8px;
   padding: 32px 16px;
 }
-.dark-theme .message.narrator {
+.dark-theme .message[data-who=narrator] {
   background-color:#444;
 }
 /** C h a r a **/
-.message.chara {
+.message[data-who|=c] {
   margin-top: 30px;
   border: 1px solid rgba(0,0,0,0.2);
   border-radius: 16px 16px 16px 0;
   padding: 24px 8px 12px;
 }
-.message.chara .chara-name {
+.message[data-who|=c] .chara-name {
   position: absolute;
   left: 25px;
   top: -13px;
-  z-index: 1;
+  z-index: 10;
   background-color: inherit;
   border: 1px solid rgba(0,0,0,0.2);
   border-radius: 6px;
@@ -116,21 +209,55 @@ main {
   word-spacing: 1px;
   box-shadow: 2px 2px 4px rgba(0,0,0,0.03);
 }
-.dark-theme .message-chara {
+.dark-theme .message[data-who|=c] {
   border-color: rgba(255,255,255,0.3);
 }
-.message.chara blockquote {
+.message[data-who|=c] blockquote {
   background-color: white;
   color: black;
   opacity: 0.8;
   border-radius: 12px 12px 12px 0;
   padding: 8px;
 }
-.dark-theme .message.chara blockquote {
+.dark-theme .message[data-who|=c] blockquote {
   background-color: black;
   color: white;
   opacity: 0.6;
 }
+/** O O C **/
+.message[data-who=ooc] {
+  padding: 4px 16px;
+  background-color: rgba(120,120,120,0.1);
+}
+.message[data-who=ooc] + .message[data-who=ooc] {
+  margin-top: 0;
+}
+.message .user-name {
+  display: none;
+}
+.message[data-who=ooc] .user-name {
+  display: inline;
+  border: solid 1px gray;
+  border-radius: 6px;
+  padding: 1px 5px;
+}
+.message[data-who=ooc] .user-name::after {
+  content: ':'
+}
+.message[data-who=ooc]:not(.editing) blockquote {
+  display: inline;
+}
+.message[data-who=ooc]:not(.editing) blockquote::before {
+  float: right;
+  content: "\00a0\00a0";
+  display: inline-block;
+  width: 110px;
+/*   background-color: red; */
+}
+.message[data-who=ooc]:not(.editing)[data-rev="1"] blockquote::before {
+  width: 40px;
+}
+
 
 
 /***** SEND BOX: the box where you type stuff in to send as a message *****/
@@ -140,12 +267,16 @@ main {
   left: 0;
   right: 0;
   border: solid 1px rgba(0,0,0,0.15);
+  box-shadow: 0 15px #fafafa;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  background-color: inherit;
+  z-index: 30;
 }
 .dark-theme #send-box {
   border-color: rgba(255,255,255,0.4);
+  box-shadow: 0 15px #303030;
 }
 
 @media (max-width: 719px) {
@@ -166,7 +297,7 @@ main {
     right: 320px;
   }
 }
-#send-box #change-chara {
+#send-box .change-chara {
   display: block;
   height: 48px;
   flex-grow: 1;
@@ -174,17 +305,26 @@ main {
   font-size: 120%;
   padding: 8px;
 }
+@media (max-width: 1023px) {
+  #send-box .change-chara::after {
+    content: '(Change...)';
+    font-style: italic;
+    font-size: 85%;
+    opacity: 0.7;
+    padding-left: 16px;
+  }
+}
 #send-box .icon-button {
   display: block;
   width: 40px;
   height: 40px;
 }
 @media (min-width: 720px) {
-  #send-box #change-chara {
+  #send-box .change-chara {
     padding-left: 50px;
   }
-  #send-box .icon-button:last-of-type {
-    margin-right: 50px;
+  #send-box :nth-last-child(3) {
+    margin-right: 55px;
   }
 }
 #send-box button {
@@ -196,6 +336,7 @@ main {
   resize: none;
   width: 100%;
   padding: 8px;
+  padding-right: 56px;
   background-color: rgba(255,255,255,0.8);
   color: black;
   max-height: calc(30vh - 50px);
@@ -213,7 +354,7 @@ main {
   width: 48px;
   background-color: transparent;
 }
-#send-box :invalid ~ button[type="submit"] {
+#send-box:invalid button[type="submit"] {
   opacity: 0.26;
 }
 @media (min-width: 720px) {
@@ -226,18 +367,22 @@ main {
     box-sizing: content-box;
   }
 }
+#send-box.narrator .chara-name::before {
+  content: '📖 Narrator';
+}
+#send-box.ooc .chara-name::before {
+  content: '💬 Out of Character';
+}
 
 /***** DRAWERS, which are panels that pop in from the side of the page. For example, the character-selector drawer *****/
 .drawer {
   position: fixed;
   top: 0;
   bottom: 0;
-  display: flex;
-  flex-direction: column;
   max-width: 320px;
   width: 80%;
   background-color: inherit;
-  z-index: 5;
+  z-index: 50;
   transition: transform 0.2s cubic-bezier(.25,.8,.25,1);
   padding-top: 64px;
   transform: translate(0px, 0px);
@@ -265,48 +410,44 @@ main {
 @media (min-width: 1024px) {
   .drawer.drawer-dock-1024 {
     box-shadow: unset;
-    z-index: 4;
+    z-index: 40;
     transform: unset !important;
-    flex: 0 0 320px;
     right: 0;
-  }
-  .drawer.drawer-dock-1024.drawer-right {
-    order: 1;
-  }
-  .drawer.drawer-dock-1024.drawer-left {
-    order: -1;
   }
   .drawer.drawer-dock-1024 .close-button {
     display: none;
   }
   .drawer.drawer-dock-1024 header {
-    box-shadow: none;
+    box-shadow: unset;
   }
-  body {
+  .drawer.drawer-dock-1024.drawer-right ~ main {
+    margin-right: 320px;
+  }
+  .drawer.drawer-dock-1024.drawer-right ~ main {
     margin-right: 320px;
   }
 }
 
 .drawer-body {
-  display: flex;
+  padding-top: 8px;
+  height: 100%;
+  box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  flex-direction: column;
-  flex-grow: 1;
-  padding-top: 8px;
 }
 .drawer-body > hr {
   border: none;
   border-top: solid 1px;
   border-top-color: rgba(0,0,0,.12);
   display: block;
-  margin: 0;
+  margin: 10px 0;
 }
 .dark-theme .drawer-body > hr {
   border-top-color: rgba(255,255,255,.12);
 }
-.drawer-body > :not(hr) {
+.drawer-body > :not(hr):not(div),
+.drawer-body > div > * {
   /* reset */
   background: none;
   border: none;
@@ -316,11 +457,7 @@ main {
   box-sizing: border-box;
   /* styles */
   width: 100%;
-  height: 48px;
-  min-height: 48px;
-  line-height: 48px;
-  padding: 0 40px 0 20px;
-  font-size: 16px;
+  padding: 8px 40px 8px 20px;
   cursor: pointer;
   display: block;
   position: relative;
@@ -328,9 +465,19 @@ main {
   text-overflow: ellipsis;
   overflow: hidden;
 }
-.drawer-body > :not(hr):first-letter {
+.drawer-body > details {
+  white-space: unset;
+  overflow: unset;
+  text-overflow: unset;
+}
+.drawer-body > details > summary::-webkit-details-marker {
+  display: none
+}
+.drawer-body > details[open] {
+  background-color: rgba(128,128,128,0.2);
+}
+.drawer-body > :not(hr):not(div):first-letter {
   font-size: 22px;
-  transform: translateY(52px);
   letter-spacing: 8px;
 }
 .drawer-body > * > input[type="checkbox"] {
@@ -338,11 +485,12 @@ main {
   right: 20px;
   top: 18px;
 }
-.drawer-body > * > button,
-.drawer-header > * > button {
+.drawer-body :not(form) > button:last-child,
+.drawer header > button {
   position: absolute;
   right: 4px;
   top: 4px;
+  bottom: 4px;
 }
 .drawer-body > .selected {
   box-shadow: inset 10px 0 5px -5px rgba(0, 0, 0, 0.5);
@@ -394,7 +542,11 @@ main {
   }
 }
 
-/***** CHARA ICONS, the subtle shadows so the colored icons for charas don't blend into the background *****/
+/***** CHARA DRAWER specific styles *****/
+.chara-row.editing > label,
+.chara-row:not(.editing) > form {
+  display: none;
+}
 .chara-icon-shadow {
   text-shadow: 1px 1px 1px rgba(0,0,0,0.6);
 }

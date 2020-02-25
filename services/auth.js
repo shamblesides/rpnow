@@ -36,8 +36,7 @@ module.exports = function (realpassString) {
       })
     },
     
-    generateToken(roompass) {
-      const userid = 'anon:' + crypto.randomBytes(16).toString('hex');
+    generateToken(userid, roompass) {
       const token = jwt.sign({ userid, roompass }, jwtSecret);
       return { userid, token };
     },

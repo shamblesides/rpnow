@@ -1,8 +1,51 @@
+/* ============================================================
+
+TAILDB (name WIP!)
+
+Embedded JSON key/value store with some oddities:
+
+* Tiny (Less than 300 lines of code)
+* Pure JS
+* Zero dependencies
+* Synchronous API (love it or hate it)
+* Stores complete history of all values
+* Corruption-resistant against incomplete writes
+* Atomic batch writes
+* Values ARE NOT kept in memory, so memory usage is low
+* Keys ARE kept in memory, for fast pagination & key searching
+* Monotonically increasing ID's for a prefix, if desired
+* Create sub-DB restricted to a specific key prefix
+* Hook to validate objects before inserting
+
+License: MIT
+Author: Nigel Nelson, 2020
+============================================================ */
+
 const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
+/**
+ * We can swap in a function here if we want granular debug statements
+ */
 // const debug = console.debug.bind(console);
-const debug = () => {}
+const debug = () => {};
 
+/**
+ * Given a sorted array of strings, and a search value, this function
+ * determines the number of values in the array that come before the
+ * search value lexicographically.
+ * 
+ * In other words, find the index of the first value that is greater
+ * than or equal to the search value. If all values are less, this
+ * function returns the length of the array.
+ * @param {Array<string>} arr SORTED array to search
+ * @param {string} prefix The string to compare to
+ * @param {number?} start First index of the array to search, inclusive
+ * @param {number?} end Last index of the array to search, exclusive
+ * @returns {number} number of values that come before the search string,
+ * even if it is not in the array
+ */
 function findFirstSorted(arr, prefix, start=0, end=arr.length) {
   if (start >= end) return start;
   const m = (start+end)/2|0;
@@ -10,8 +53,65 @@ function findFirstSorted(arr, prefix, start=0, end=arr.length) {
   else return findFirstSorted(arr, prefix, start, m);
 }
 
+/**
+ * Given a sorted array of strings, and a prefix string, find the range
+ * of values that start with a given prefix.
+ * 
+ * If there are no prefixes in the range, the start index and the (exclusive!)
+ * end index will be equal to each other. Their values will be the first
+ * index of a value that comes after the prefix (or the array length if
+ * all values come before it.)
+ * @param {Array<string>} arr SORTED array to search
+ * @param {string} prefix prefix that all keys in the range should start with
+ * @returns {[number, number]} The first index (inclusive) and last index
+ * (exclusive) of values with the prefix.
+ */
 function prefixRange(arr, prefix) {
-  return [findFirstSorted(arr, prefix), findFirstSorted(arr, prefix+'\ufff0')]
+  // The last index is determined by finding the first key that is greater than
+  // (prefix + very_high_unicode_character). This effectively gives us the
+  // exclusive last index.
+  return [findFirstSorted(arr, prefix), findFirstSorted(arr, prefix+'\ufff0')];
+}
+
+function idgen({
+  // These must never be changed for the same database
+  base=36,
+  firstYear=2020,
+  supportYear=firstYear+200,
+  // Can be decreased any time
+  // Should be less than the expected amount of time over which
+  //  the server will be stopped and started again! Otherwise we
+  //  lose the monotonic increase guarantee
+  // MAY be increased, but make sure the server is down for at
+  //  least the amount of time that it is increased to!
+  maxTimeWindow=100,
+  // Can be increased OR decreased any time
+  counterSize=1,
+} = {}) {
+  const t0 = new Date(`${firstYear}-01-01`).getTime();
+  const tSpan = new Date(`${supportYear}-01-01`).getTime() - t0;
+  const timestampSize = Math.ceil(Math.log(tSpan/maxTimeWindow) / Math.log(base));
+  const tsStr = (t) => ((t - t0) / tSpan).toString(base).slice(2,2+timestampSize);
+
+  // TODO could use db record count for counter
+  let counter = 0;
+  let lastTimeString;
+  return function makeId() {
+    const timeString = tsStr(Date.now());
+
+    if (counter+1 >= base**counterSize) {
+      throw new Error(`Too many ids generated in this ${(tSpan / base**timestampSize).toFixed()} ms timeslot`);
+    } else if (lastTimeString === timeString) {
+      counter++;
+    } else {
+      lastTimeString = timeString;
+      counter = 0;
+    }
+
+    const counterString = (counter).toString(base).padStart(counterSize,'0')
+
+    return timeString + counterString;
+  }
 }
 
 function readDB(dbfile, fd, register) {
@@ -23,12 +123,12 @@ function readDB(dbfile, fd, register) {
     const bytesRead = fs.readSync(fd, buf, 0, readsize);
     totalBytes += bytesRead;
     wip = Buffer.concat([wip, buf.subarray(0, bytesRead)]);
-    debug(`read ${bytesRead} (total ${totalBytes})`)
-    debug(`in wip: ${wip.length}`)
+    debug(`read ${bytesRead} (total ${totalBytes})`);
+    debug(`in wip: ${wip.length}`);
     while (1) {
       const lineEnd = wip.indexOf('\n');
       if (lineEnd === -1) break;
-      debug(`found line end: ${lineEnd}`)
+      debug(`found line end: ${lineEnd}`);
 
       let line = wip.subarray(0, lineEnd);
       while (line.length > 0) {
@@ -39,113 +139,196 @@ function readDB(dbfile, fd, register) {
 
         register(json);
 
-        line = line.subarray(recordEnd + 1)
+        line = line.subarray(recordEnd + 1);
       }
-      
+
       wip = wip.subarray(lineEnd + 1);
     }
     if (bytesRead < readsize) break;
   }
 
   if (wip.length > 0) {
-    console.warn(`removing ${wip.length} bytes at end of db`)
+    console.warn(`removing ${wip.length} bytes at end of db`);
     fs.truncateSync(dbfile, totalBytes - wip.length);
   }
-  debug('loaded db')
+  debug('loaded db');
 }
 
 module.exports = DB;
+/**
+ * Opens and initializes a database from a file on disk.
+ * @param {string} dbfile Absolute path to the file
+ */
 function DB(dbfile) {
-  // Make file if not exists
-  fs.closeSync(fs.openSync(dbfile, 'a'));
+  // ==================================
+  // 0. IN-MEMORY STRUCTURES
+  // ==================================
 
-  // Opens a file (read/append, synchronous i/o, create if not exists)
-  // const fd = fs.openSync(dbfile, 'as+', 0o660);
-  const fd = fs.openSync(dbfile, 'r', 0o660);
+  /**
+   * Lexicographically sorted list of keys in the database.
+   * An item with multiple revisions still only appears in this
+   * array once.
+   * @type {Array<string>}
+   */
+  const keys = [];
 
-  const _meta = {
-    keys: [], // [<string>, ...] alph order, no dupes
-    infos: {}, // { [key]: [[<offset>, <length>], ...] }
-    log: [], // [<string>, ...] insertion order, dupes for each put
-  };
+  /**
+   * Stores information on where the document's JSON is stored in the
+   * database file. A value in this object is an array. Each element
+   * of that array represents a revision of the document, and where
+   * to find it in the file, stored as an inner two-element array
+   * in the form of [offset, length].
+   * @type {Object.<string, Array<[number, number]>>}
+   */
+  const infos = {};
 
+  /**
+   * This tracks the last stable length of the file.
+   * 
+   * It's possible that the actual current length will be longer,
+   * if the databse is in the middle of a write.
+   */
   let end = 0;
 
-  function register(json, _id) {
-    debug('registering', json)
-    _id = _id || JSON.parse(json)._id;
+  /**
+   * getNextID() gives a unique, monotonically-increasing
+   * string that can be used as an ID. These are based
+   * on the curren ttimestamp and a counter component.
+   */
+  const getNextID = idgen();
 
-    const size = Buffer.byteLength(json);
-
-    if (_meta.infos[_id] == null) {
-      _meta.infos[_id] = [];
-      _meta.keys.push(_id);
-      _meta.keys.sort();
-    }
-
-    _meta.infos[_id].push([end, size])
-
-    _meta.log.push(_id);
-
-    end += size + 1;
-    
-    return _meta.infos[_id].length; // _rev num
-  }
-
-  readDB(dbfile, fd, register)
-
-  let _nextId = _meta.keys.length;
-  function id() {
-    return (_nextId++).toString(36).padStart(5, '0');
-  }
-
+  /**
+   * Checks how many revisions a particular document has.
+   * This might be 0 if a document with the given _id has
+   * not yet been added.
+   * @param {string} _id Document _id
+   * @returns {number} Number of revisions, possibly 0
+   */
   function revCount(_id) {
-    return (_meta.infos[_id] || []).length;
+    return (infos[_id] || []).length;
   }
 
-  // _rev is 1-based, not 0-based
+  /**
+   * Finds the last _rev value for a document
+   * of a given key. Because _rev is 1-based,
+   * not 0-based, this is equal to the number
+   * of revisions.
+   * @param {string} _id Document _id
+   * @returns {number} Last revision number,
+   * or `null` if not in database
+   */
   function lastRevNum(_id) {
     return revCount(_id) || null;
   }
 
-  function read(_id, _rev) {
-    if (revCount(_id) === 0) throw new Error('_id not in database');
-    if (_rev == null) _rev = lastRevNum(_id);
+  /**
+   * Add metadata about our JSON record to our in-memory metadata
+   * storage.
+   * @param {string} json A JSON string of the object
+   * @param {string?} _id Optional _id of the object. If not provided,
+   * it will be parsed from the JSON. This arg is just used to speed up
+   * insertion if the _id is already known.
+   */
+  function register(json, _id=JSON.parse(json)._id) {
+    debug('registering', json);
 
-    const info = _meta.infos[_id][_rev - 1];
+    const size = Buffer.byteLength(json);
+
+    if (infos[_id] == null) {
+      infos[_id] = [];
+
+      const insertIndex = findFirstSorted(keys, _id);
+      keys.splice(insertIndex, 0, _id);
+    }
+
+    infos[_id].push([end, size]);
+
+    end += size + 1;
+
+    return infos[_id].length; // _rev num
+  }
+
+  /**
+   * Retrieve a JSON document from disk.
+   * @param {string} _id 
+   * @param {number} _rev Revision number. If not provided, retrieves
+   * the most recent.
+   */
+  function read(_id, _rev=lastRevNum(_id)) {
+    if (revCount(_id) === 0) throw new Error('_id not in database');
+
+    const info = infos[_id][_rev - 1];
     if (!info) throw new Error('_rev not in database');
 
-    const [position, length] = info
+    const [position, length] = info;
     const buf = Buffer.alloc(length);
     fs.readSync(fd, buf, 0, length, position);
     const { _id: _id_, ...obj } = JSON.parse(buf);
     return { _id, _rev, ...obj };
   }
 
-  const DB = ({ prefix='', validator=()=>true }) => ({
+  // ==================================
+  // 1. CHECK & CREATE LOCKFILE
+  // ==================================
+  // (Not done in here)
+
+  // ==================================
+  // 2. GET METADATA FROM FILE
+  // ==================================
+  // Create file if it doesn't already exist
+  fs.closeSync(fs.openSync(dbfile, 'a'));
+
+  // Open the file for reading.
+  const fd = fs.openSync(dbfile, 'r', 0o660);
+
+  // Parse the DB
+  readDB(dbfile, fd, register);
+
+  // ==================================
+  // 3. RETURN PUBLIC API
+  // ==================================
+  const DB = ({ prefix='', validator=()=>{} }) => ({
     group: prefix ? null : function (prefix, v=validator) {
       return DB({ prefix, validator: v });
     },
     put(...objs) {
-      const modified = objs.map(obj => {
-        if (typeof obj !== 'object') throw new Error('not an object')
-        obj = Object.assign({}, obj);
-        if (obj._id == null) {
-          if (!prefix) throw new Error('missing _id');
-          obj._id = prefix+id();
-        } else {
-          // if it's a group, check that _id has the prefix
-          if (typeof obj._id !== 'string') throw new Error('_id must be a string');
-          if (prefix && !obj._id.startsWith(prefix)) throw new Error('wrong _id prefix');
+      const modified = objs.map(inputObj => {
+        if (typeof inputObj !== 'object') throw new Error('not an object');
 
-          if (revCount(obj._id) == 0) { // CREATE
-            if (prefix || obj._rev) throw new Error('list item with this _id does not exist');
-          } else { // UPDATE
-            if (obj._rev != null && obj._rev !== lastRevNum(obj._id)) throw new Error('_rev conflict');
-          }
-        }
-        delete obj._rev;
+        let { _rev, ...obj } = inputObj;
+
         validator(obj); // should throw error if invalid
+        
+        // Error checking with the _id
+        if ('_id' in obj) {
+          if (typeof obj._id !== 'string') throw new Error('_id must be a string');
+
+          if (prefix) {
+            // if it's a group, check that _id has the prefix
+            if (!obj._id.startsWith(prefix)) throw new Error(`_id should begin with ${prefix}`);
+            // can't arbitrarily insert new _id's into a prefixed list. they should be generated.
+            if (revCount(obj._id) == 0) throw new Error('list item with this _id does not exist');
+          }
+        } else {
+          // must provide id if there's no prefix
+          if (!prefix) throw new Error('missing _id');
+        }
+
+        // Error checking with the _rev
+        if (_rev != null) {
+          if (!(_rev >= 1)) throw new Error('invalid _rev');
+          if (!('_id' in obj)) throw new Error('object has _rev, but no id');
+          if (_rev < lastRevNum(obj._id)) throw new Error('_rev conflict');
+          if (_rev !== lastRevNum(obj._id)) throw new Error('wrong _rev');
+        }
+
+        // Generate _id if it needs one
+        if (!('_id' in obj)) {
+          obj = { _id: prefix+getNextID(), ...obj };
+          // If this generates an error, it's either a logic error for the application, or a bug
+          if (revCount(obj._id) !== 0) throw new Error(`INTERNAL ERROR! tried to use _id ${obj._id} but it already exists`);
+        }
+
         return obj;
       });
       const jsons = modified.map(obj => JSON.stringify(obj));
@@ -159,7 +342,7 @@ function DB(dbfile) {
     has(_id) {
       if (typeof _id !== 'string') throw new Error('invalid id');
       if (!_id.startsWith(prefix)) throw new Error('_id has wrong prefix');
-      return !!_meta.infos[_id];
+      return !!infos[_id];
     },
     findOrFail(_id) {
       if (!this.has(_id)) throw new Error('_id not found');
@@ -180,23 +363,24 @@ function DB(dbfile) {
     },
     * iterator ({ skip=0, limit=Infinity, reverse=false }={}) {
       if (!(skip >= 0)) throw new Error('skip must be >= 0');
-      const [i0, i1] = prefixRange(_meta.keys, prefix);
+      const [i0, i1] = prefixRange(keys, prefix);
       const [start, end, inc] = (!reverse) ? [i0+skip, i1, 1] : [i1-1-skip, i0-1, -1];
       for (let i = start; Math.sign(end-i) === inc; i += inc) {
         if (--limit < 0) return;
-        yield read(_meta.keys[i]);
+        yield read(keys[i]);
       }
     },
     list({ skip=0, limit=Infinity, reverse=false }={}) {
       return [...this.iterator({ skip, limit, reverse })]
     },
     count() {
-      if (!prefix) return _meta.keys.length;
+      if (!prefix) return keys.length;
 
-      const [i0, i1] = prefixRange(_meta.keys, prefix);
+      const [i0, i1] = prefixRange(keys, prefix);
       return i1 - i0;
     },
   });
 
   return DB({});
 }
+
