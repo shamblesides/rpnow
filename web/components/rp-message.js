@@ -1,4 +1,4 @@
-
+// TODO DELETE THIS FILE AND ITS DIRECTORY
 
 export default {
   template: `

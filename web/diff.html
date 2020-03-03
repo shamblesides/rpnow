@@ -45,20 +45,14 @@
   
   <template id="hist">
     <li>
-      <i></i>
+      <i>Posted by: <span></span></i>
       <br>
       <time></time>
       <blockquote></blockquote>
       <code></code>
     </li>
   </template>
-
-  <!-- Polyfills -->
-  <script src="https://cdn.jsdelivr.net/npm/text-encoding@0.7.0/lib/encoding.js" integrity="sha256-E9b12NeEmrVSXHs978RmbR1TsqL7+Xd+tHA5lWzi0Mc=" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/whatwg-fetch@3.0.0/dist/fetch.umd.js" integrity="sha256-mgxDAbboBKeoCOtpaU7QhWdgWBGum+8dPxnIjiC97JI=" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/web-streams-polyfill@2.0.6/dist/polyfill.min.js" integrity="sha256-zAIrVOzXBA0qU8c/qYEjWbrGXGaRofFgf44jqGCCVEI=" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fetch-readablestream@0.2.0/dist/fetch-readablestream.js" integrity="sha256-4BecP76XqkCxNLLYAOlCkG7KbILJ9Be1rjZ4ylNXY+Q=" crossorigin="anonymous"></script>
-
+  
   <script src="rp.js"></script>
   <script src="format-rp-message.js"></script>
 
@@ -93,9 +87,10 @@
     }
     
     RP.getMessageHistory(id).then(function(msgs) {
+      console.log(msgs);
       msgs.forEach(function (msg) {
         var el = document.querySelector('template#hist').content.cloneNode(true).querySelector('*');
-        el.querySelector('i').innerText = msg.username;
+        el.querySelector('i span').innerText = msg.username;
         el.querySelector('time').innerText = new Date(msg.timestamp).toLocaleString();
         el.querySelector('time').innerText += ` (${timeAgoText(msg.timestamp)})`;
         el.querySelector('time').datetime = msg.timestamp;

@@ -144,6 +144,7 @@ main {
 
 /***** RP MESSAGES *****/
 .message {
+  display: block;
   width: 600px;
   max-width: 100%;
   box-sizing: border-box;
@@ -256,6 +257,11 @@ main {
 }
 .message[data-who=ooc]:not(.editing)[data-rev="1"] blockquote::before {
   width: 40px;
+}
+/** IMAGE **/
+img.message {
+  max-height: 30vh;
+  object-fit: contain;
 }
 
 

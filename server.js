@@ -132,6 +132,7 @@ api.post('/rp/import', (req, res, next) => {
     fs.copyFileSync(req.file.path, dbFilepath);
     loadDB();
 
+    // TODO kinda dont like this. maybe we should not even allow streaming if it's not imported yet
     broadcast({ type: 'reload' });
 
     res.redirect('/');
@@ -165,7 +166,8 @@ api.get('/rp', (req, res, next) => {
     if (res.flush) res.flush();
   }
   
-  // TODO if import is in progress, send notice and then wait
+  // TODO if import is in progress, send notice and then wait.
+  // TODO ...OR throw an error!
 
   
   const msgs = (page == null)
@@ -323,7 +325,8 @@ api.get('/rp/msgs/:doc_id([a-z0-9-]+)/history', (req, res, next) => {
   const msgs = Msgs.history(_id);
   msgs.forEach(msg => {
     // add extra username prop for convenience
-    msg.username = (Users.findOrFail(msg.userid)).name;
+    const user = Users.find(msg.userid);
+    if (user) msg.username = user.name;
   });
   res.status(200).json(msgs);
 });

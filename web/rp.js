@@ -1,80 +1,85 @@
-// TODO consider using XHR instead of fetch, so we drop 4 polyfills
-
 window.RP = (function() {
   var exports = {};
   
-  var utf8 = new TextDecoder();
-
-  var JSON_HEADERS = { 'Content-Type': 'application/json' };
-
-  var RESPONSE_OK = function (response) {
-    if (response.ok) {
-      return response;
-    } else {
-      // Compatibility layer for when this is applied to a polyfilled fetchStream
-      // If we stop polyfilling fetch, we can safely assume ('text' in response) === true
-      return (
-        ('text' in response)
-        ? response.text()
-        : (function readmore (reader) {
-            return reader.read().then(function (chunk) {
-              return chunk.done ? '' : readmore(reader).then(function(str) { return utf8.decode(chunk.value) + str });
-            })
-          }(response.body.getReader()))
-      )
-      .then(function (data) {
-        try {
-          return JSON.parse(data).error || data;
-        } catch (parseErr) {
-          return data;
-        }
-      })
-      .then(function (text) {
-        var err = new Error(`${response.status} ${response.statusText} - ${text}`);
-        err.response = response;
-        throw err;
-      })
-    }
-  };
-
-  var ALERT_ERROR = function (err) {
-    alert(err)
+  function isOK(xhr) {
+    var firstDigit = Math.floor(xhr.status / 100);
+    return firstDigit === 2;
+  }
+  
+  function alertError(err) {
+    alert(err);
     throw err;
+  }
+  
+  function xhrPromiseResult(resolve, reject) {
+    if (isOK(this)) {
+      resolve(this.response)
+    } else if (this.status > 0) {
+      var details;
+      if (typeof this.response === 'object') {
+        details = this.response.error || JSON.stringify(details);
+      } else if (typeof this.response === 'string') {
+        try {
+          details = JSON.parse(this.response).error || this.response;
+        } catch (err) {
+          details = this.response;
+        }
+      } else {
+        details = this.response;
+      }
+      var err = new Error(`${this.status} ${this.statusText} - ${details}`);
+      err.status = this.status;
+      reject(err);
+    } else {
+      reject(new Error('Network error'));
+    }
+  }
+  
+  function request(method, url, body, contentType) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.onloadend = xhrPromiseResult.bind(xhr, resolve, reject);
+      xhr.open(method, url);
+      xhr.responseType = 'json';
+      if (contentType) {
+        xhr.setRequestHeader('Content-Type', contentType);
+      }
+      if (body) {
+        xhr.send(body);
+      } else {
+        xhr.send();
+      }
+    });
+  }
+  
+  function requestWithJSON(method, url, bodyObject) {
+    return request(method, url, JSON.stringify(bodyObject), 'application/json');
   }
 
   function jsonStream(url, cb) {
-    // feature detection to possibly polyfill a version of fetch that supports streaming
-    var nativeFetchStreams = ('body' in Response.prototype);
-    var fetch = nativeFetchStreams ? window.fetch : window.fetchStream;
-    // console.log('Native fetch streams? ' + nativeFetchStreams)
-
-    return fetch(url)
-    .then(RESPONSE_OK)
-    .then(function(response) {
-      var reader = response.body.getReader();
-      var partial = '';
-
-      function loop() {
-        return reader.read().then(function(chunk) {
-          if (chunk.done) {
-            throw new Error('server ended stream');
-          }
-
-          partial += utf8.decode(chunk.value);
-          var lines = partial.split('\n');
-          partial = lines.pop();
-
-          lines.forEach(function (line) {
-            var json = line.trim();
-            if (json.length === 0) return;
-            var value = JSON.parse(json)
-            cb(value);
-          })
-
-          return loop();
-        })
+    var xhr = new XMLHttpRequest();
+    
+    var readFrom = 0;
+    
+    xhr.onprogress = function() {
+      if (this.status !== 200) return;
+      
+      var idx;
+      while (((idx = this.response.indexOf('\n', readFrom))) !== -1) {
+        var json = this.response.substring(readFrom, idx);
+        var obj = JSON.parse(json);
+        cb(obj);
+        readFrom = idx+1;
       }
-      return loop();
+    }
+    
+    return new Promise(function(resolve, reject) {
+      xhr.onloadend = xhrPromiseResult.bind(xhr, resolve, reject);
+      xhr.open('GET', url);
+      xhr.send();
+    })
+    .then(function () {
+      throw new Error('Server ended stream');
     })
   }
 
@@ -83,25 +88,19 @@ window.RP = (function() {
     if (passcode == null) {
       return Promise.reject(new Error('Unauthorized'));
     }
-    while (!name) {
+    if (!name) {
       name = prompt('And what is your name? (as in you, the writer?)')
+      if (!name) return Promise.reject(new Error('No name'))
     }
-    return fetch('/api/auth', {
-      method: 'POST',
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ passcode: passcode, name: name }),
-    })
-    .then(function (res) {
-      return res.json().then(function (json) {
-        if (!res.ok) {
-          var retry = confirm(`Error: ${json.error}. Retry?`)
-          if (retry) {
-            return auth(name);
-          } else {
-            throw new Error(json.error);
-          }
-        }
-      });
+    
+    return requestWithJSON('POST', '/api/auth', { passcode: passcode, name: name })
+    .catch(function (err) {
+      var retry = confirm(`Failed to authenticate. Retry? (${err})`);
+      if (retry) {
+        return auth(name);
+      } else {
+        throw err;
+      }
     });
   }
 
@@ -131,13 +130,13 @@ window.RP = (function() {
       }
     })
     .catch(function (err) {
-      if (err.response && err.response.status === 401) {
+      if (err.status === 401) {
         auth()
         .then(retry)
         .catch(function (err) {
           onerror(err, true)
         });
-      } else if (err.response && err.response.ok === false) {
+      } else if (err.status) {
         onerror(err, true);
       } else {
         onerror(err, false);
@@ -146,62 +145,34 @@ window.RP = (function() {
     })
   }
 
-  function sendUpdate(type, body) {
-    return fetch('/api/rp/' + type, {
-      method: 'PUT',
-      headers: JSON_HEADERS,
-      body: JSON.stringify(body),
-    })
-    .then(RESPONSE_OK)
-    .then(function (response) { return response.json() })
-    .then(function (data) {
-      return data;
-    })
-    .catch(ALERT_ERROR);
-  }
-
   exports.sendMessage = function sendMessage(data) {
-    return sendUpdate('msgs', data);
+    return requestWithJSON('PUT', '/api/rp/msgs', data)
+    .catch(alertError)
   }
 
   exports.sendChara = function sendChara(data) {
-    return sendUpdate('charas', data);
+    return requestWithJSON('PUT', '/api/rp/charas', data)
+    .catch(alertError)
   }
 
   exports.getMessageHistory = function getMessageHistory(_id) {
-    return fetch('/api/rp/msgs/' + _id + '/history')
-    .then(RESPONSE_OK)
-    .then(function (response) { return response.json() })
-    .catch(ALERT_ERROR);
+    return request('GET', `/api/rp/msgs/${_id}/history`)
+    .catch(alertError)
   }
 
   exports.changeTitle = function changeTitle(title) {
-    return fetch('/api/rp/title', {
-      method: 'PUT',
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ title: title }),
-    })
-    .then(RESPONSE_OK)
-    .catch(ALERT_ERROR);
+    return requestWithJSON('PUT', '/api/rp/title', { title: title })
+    .catch(alertError)
   }
 
   exports.addWebhook = function addWebhook(webhook) {
-    return fetch('/api/rp/webhook', {
-      method: 'PUT',
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ webhook: webhook }),
-    })
-    .then(RESPONSE_OK)
-    .catch(ALERT_ERROR);
+    return requestWithJSON('PUT', '/api/rp/webhook', { webhook: webhook })
+    .catch(alertError)
   }
 
   exports.importJSON = function importJSON(file) {
-    return fetch('/api/rp/import', {
-      method: 'POST',
-      body: file,
-    })
-    .then(RESPONSE_OK)
-    .catch(ALERT_ERROR);
+    return request('POST', '/api/rp/import', file)
+    .catch(alertError)
   }
   
   return exports;

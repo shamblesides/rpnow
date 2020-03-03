@@ -5,9 +5,11 @@ db import frontend
 destroy all TODOs in the code
 move or delete all code from web/components/
 make sure all buttons look good
+vendor jsdelivr deps
 rpnow3 (other project) should import/export webhooks
 README
 go through console errors
+read through source and clean up the bits
 demo mode
 TOS https://glitch.com/legal/
  * "In particular, the information under the heading : User Content: “You have the right to let us use your content. We don’t warrant other user’s content.”"

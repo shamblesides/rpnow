@@ -1,3 +1,5 @@
+// TODO DELETE THIS FILE AND ITS DIRECTORY
+
 export default {
   template: `
     <div class="dialog-container overlay" @click="showImageDialog=false" v-show="showImageDialog || isDialogSending">
