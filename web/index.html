@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="My RP">
   <title>Loading...</title>
-  <link rel="stylesheet" href="styles2.css">
+  <link rel="stylesheet" href="styles.css">
   <noscript>
     <!-- TODO decide on no-js strategy -->
     <style>.js-only { display: none !important; }</style>
@@ -16,82 +16,47 @@
 <body>
   <!-- TODO consider making this non-sticky -->
   <header>
-    <button onclick="openMenu('main-menu')" data-page="chat">≡</button>
+    <button onclick="openPopup('main-menu')" data-page="chat">≡</button>
     <a href="/" class="button" data-page="archive">❮</a>
     <h1 id="title"></h1>
   </header>
   
   <!-- TODO maybe the chat page is just the final "page" of the archive. To unify things. -->
   <nav id="pager" data-page="archive">
-    <a id="prev-page">←</a>
+    <a class="icon-button" id="prev-page">←</a>
     <form>
-      <select name="page"></select>
-      <button type="submit">Go</button>
+      <select name="page" onchange="this.closest('form').submit()"></select>
     </form>
-    <a id="next-page">→</a>
+    <a class="icon-button" id="next-page">→</a>
   </nav>
   
   <aside class="error"></aside>
 
   <form id="send-box" class="chara-bg" onsubmit="sendMessage(event)" data-page="chat">
     <input type="hidden" name="type" value="text">
-    <button type="button" class="change-chara chara-name" onclick="openMenu('character-menu')"></button>
-    <button type="button" class="icon-button">🖼️</button>
+    <button type="button" class="change-chara chara-name" onclick="openPopup('character-menu')"></button>
+    <button type="button" class="icon-button" onclick="openPopup('image-dialog')">🖼️</button>
     <textarea name="content" rows="3" maxlength="10000" required placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist="sendBoxText"></textarea>
-    <button type="submit">➤</button> <!-- ⏳ -->
+    <button type="submit">➤</button> <!-- TODO ⏳ -->
   </form>
   
-<!--   <div class="dialog-container overlay" @click="showImageDialog=false" v-show="showImageDialog || isDialogSending">
-
-    <div id="image-dialog" class="dialog" @click.stop v-show="showImageDialog">
-      <div>
-        <input type="url" ref="urlbox"
-          required
-          placeholder="Enter a URL"
-          v-model="imageDialogUrl"
-          @keydown.enter="sendImage"
-        >
-      </div>
-
-      <div class="preview-container preview-container-busted" v-if="imageDialogIsChecking">
-        <span class="emoji">⏳</span> Loading...
-      </div>
-
-      <div class="preview-container" v-if="imageDialogIsValid">
-        <img :src="imageDialogUrl">
-      </div>
-
-      <div class="preview-container preview-container-busted" v-if="!imageDialogIsValid && !imageDialogIsChecking">
-        <span v-if="imageDialogUrl.length === 0"></span>
-        <span v-else-if="!$refs.urlbox.checkValidity()">Can't read this URL.</span>
-        <span v-else>Can't load this image.</span>
-      </div>
-
-      <div>
-        <button type="button" class="outline-button" @click="submit" :disabled="!imageDialogIsValid">Save</button>
-        <button type="button" class="outline-button" @click="showImageDialog=false">Cancel</button>
-      </div>
-    </div>
-
-    <template v-if="isDialogSending">
-      <span class="emoji">⏳</span> Loading...
-    </template>
-  </div>
- -->
-  
-  <form id="image-dialog" class="dialog" onsubmit="sendImage(event)" data-page="chat">
+  <form id="image-dialog" class="dialog" oninput="preview.querySelector('img').src=(this.checkValidity() ? url.value : '')" onreset="preview.querySelector('img').src=''" onsubmit="sendImage(event)" data-page="chat">
+    <h3>Image URL</h3>
     <input type="hidden" name="type" value="image">
+    <input type="hidden" name="_id">
     <input name="url" type="url" ref="urlbox" required placeholder="Enter a URL">
-    <output name="preview" for="url"></output>
-    <button type="submit">Send ➤</button>  </form>
+    <output name="preview" for="url">
+      <img alt="Image preview">
+    </output>
+    <button type="submit" class="text-button">Send ➤</button>
+    <button type="reset" class="text-button" onclick="closeMe(event)">Cancel ✘</button>
+  </form>
 
   <!-- TODO consider dissolving this into some links at the top of the page -->
   <section id="main-menu" class="drawer drawer-left" data-page="chat">
-    <div class="overlay overlay-drawer" onclick="closeMe(event)"></div>
-
     <header>
       <h2>Menu</h2>
-      <button class="icon-button close-button" onclick="closeMe(event)" title="Close">×</button>
+      <button class="close-button" onclick="closeMe(event)" title="Close">×</button>
     </header>
 
     <div class="drawer-body">
@@ -109,7 +74,7 @@
             Include OOC messages
           </label>
           <br>
-          <button type="submit">Download</button>
+          <button type="submit" class="text-button">Download</button>
         </form>
       </details>
       <hr/>
@@ -124,22 +89,16 @@
         <form action="/api/rp/import" method="POST" enctype="multipart/form-data">
           <input type="file" name="file" accept=".txt" required>
           <br>
-          <button type="submit">Upload</button>
+          <button type="submit" class="text-button">Upload</button>
         </form>
       </details>
       <details>
         <summary>📦 Export database</summary>
         <form action="/api/rp/export" method="POST" target="_blank">
-          Include which data?
-          <br>
-          <label>
-            <input type="checkbox" name="msgs" checked> Messages <br>
-          </label>
-          <label>
-            <input type="checkbox" name="charas" checked> Characters <br>
-          </label>
-          <br>
-          <button type="submit">Download</button>
+          <p>
+            This will download all RP data and history in a format that can be imported into a new server.
+          </p>
+          <button type="submit" class="text-button">Download</button>
         </form>
       </details>
       <hr/>
@@ -160,11 +119,9 @@
 
   <!-- TODO consider dropping this drawer in favor of a simple select tag -->
   <section id="character-menu" class="drawer drawer-right drawer-dock-1024" data-page="chat">
-    <div class="overlay overlay-drawer" onclick="closeMe(event)"></div>
-
     <header>
       <h2>Characters</h2>
-      <button class="icon-button close-button" onclick="closeMe(event)" title="Close">×</button>
+      <button class="close-button" onclick="closeMe(event)" title="Close">×</button>
     </header>
 
     <div class="drawer-body">
@@ -186,7 +143,8 @@
           <label>
             Color <input type="color" name="color" value="#bbeeff"> <br/>
           </label>
-          <button type="submit">Create ➔</button>
+          <button type="submit" class="text-button">Create ➔</button>
+          <button type="reset" class="text-button" onclick="this.closest('details').open = false">Cancel ✘</button>
         </form>
       </details>
     </div>
@@ -205,6 +163,10 @@
       <p>It's time to start writing!</p>
     </div>
   </main>
+  
+  <div class="overlay drawer-overlay" data-what="drawer" onclick="closePopup(event)"></div>
+  
+  <div class="overlay dialog-overlay" data-what="dialog" onclick="closePopup(event)"></div>
 
   <!-- Templates should go below all elements -->
   <!-- (Because of an iOS9 bug!) -->
@@ -212,8 +174,8 @@
 
   <template id="msg-text">
     <div class="message chara-bg">
-      <button class="history-button" onclick="showHistory(event)">history</button>
-      <button class="edit-button" onclick="toggleEditing(event)">✎</button>
+      <button class="history-button" onclick="showHistory(event)">edits</button>
+      <button class="edit-button icon-button" onclick="toggleEditing(event)">✎</button>
       <div class="chara-name"></div>
       <div class="user-name"></div>
       <blockquote></blockquote>
@@ -222,16 +184,20 @@
         <input type="hidden" name="type">
         <input type="hidden" name="who">
         <textarea name="content" maxlength="10000" rows="3" onkeydown="quicksend(event)"></textarea>
-        <button type="submit">➔</button>
-        <button type="reset" onclick="toggleEditing(event)">✘</button>
+        <button type="submit" class="text-button">Save ➔</button>
+        <button type="reset" class="text-button" onclick="toggleEditing(event)">Cancel ✘</button>
       </form>
     </div>
   </template>
 
-  
   <template id="msg-image">
-    <img class="message" alt="User posted image">
+    <div class="message">
+      <button class="history-button" onclick="showHistory(event)">edits</button>
+      <button class="edit-button icon-button" onclick="editImage(event)">✎</button>
+      <img alt="User posted image">
+    </div>
   </template>
+
   <template id="msg-login">
     <div class="notice">
       New device credentials from user named "<span class="user-name"></span>"
@@ -253,14 +219,11 @@
         <label>
           Color <input type="color" name="color" value="#bbeeff"> <br/>
         </label>
-        <button type="submit">Submit ➔</button>
-        <button type="reset" onclick="toggleEditing(event)">Cancel ✘</button>
+        <button type="submit" class="text-button">Save ➔</button>
+        <button type="reset" class="text-button" onclick="toggleEditing(event)">Cancel ✘</button>
       </form>
-      
     </div>
   </template>
-
-  <!-- TODO Image dialog -->
 
   <!-- TODO Import (dialog?) -->
 
@@ -272,15 +235,34 @@
   </script>
 
   <script>
-    function openMenu(id) {
+    function openPopup(id) {
       document.getElementById(id).classList.toggle('open');
       document.getElementById(id).querySelector('button,input,a').focus();
     }
+    function closePopup(event) {
+      var className = event.target.dataset.what;
+      Array.from(document.getElementsByClassName(className))
+      .forEach(closeElement);
+    }
     function closeMe(event) {
-      event.target.closest('.drawer, .dialog-container').classList.remove('open');
+      closeElement(event.target.closest('.drawer, .dialog'));
+    }
+    function closeElement(el) {
+      if (el && el.classList.contains('open')) {
+        if (el.tagName === 'FORM') el.reset();
+        el.classList.remove('open');
+      }
     }
     function toggleEditing(event) {
       event.target.closest('.message, .chara-row').classList.toggle('editing');
+    }
+    function editImage(event) {
+      var message = event.target.closest('.message');
+      var src = message.querySelector('img').src;
+      document.getElementById('image-dialog').elements['_id'].value = message.id;
+      document.getElementById('image-dialog').elements['url'].value = src;
+      document.getElementById('image-dialog').elements['preview'].children[0].src = src;
+      openPopup('image-dialog');
     }
     function darkMode(isDark) {
       document.body.classList.toggle('dark-theme', isDark);
@@ -306,8 +288,7 @@
     function openWebhookDialog() {
       var webhook = prompt('Webhook URL, please:');
       if (webhook) {
-        RP.addWebhook(webhook)
-        .then(function () {
+        RP.addWebhook(webhook, function() {
           alert('Webhook added successfully')
         })
       }
@@ -337,7 +318,7 @@
           args.content = newContent;
         }
       }
-      RP.sendMessage(args).then(function() {
+      RP.sendMessage(args, function() {
         event.target.querySelector('[name=content]').value = '';
         try { localStorage.removeItem('rpsettings.sendBoxText') } catch (err) {}
       });
@@ -356,18 +337,22 @@
     function sendImage(event) {
       event.preventDefault();
       var args = {
+        _id: event.target.elements._id.value || undefined,
         type: event.target.elements.type.value,
         url: event.target.elements.url.value,
       };
-      RP.sendMessage(args).then(function() {
+      RP.sendMessage(args, function() {
         event.target.reset();
+        closeMe(event);
       })
-    }    function sendChara(event) {
+    }
+    
+    function sendChara(event) {
       event.preventDefault();
       RP.sendChara({
         name: event.target.elements.name.value,
         color: event.target.elements.color.value,
-      }).then(function() {
+      }, function() {
         event.target.querySelector('[name=name]').value = '';
       })
     }
@@ -532,9 +517,9 @@
         el.querySelector('form [name=who]').value = data.who;
         el.querySelector('form [name=content]').defaultValue = data.content;
         el.querySelector('blockquote').innerHTML = formatRpMessage(data.content);
-
       } else if (data.type === 'image') {
-        el.src = data.url;      } else if (data.type === 'login') {
+        el.querySelector('img').src = data.url;
+      } else if (data.type === 'login') {
         // nothing special I guess
       }
       return el;
@@ -548,7 +533,7 @@
           container.replaceChild(el, oldEl);
         }
       } else {
-        container.insertBefore(el, before || null); // if before is null, then this is the end
+        container.insertBefore(el, before || null); // if "before" is null, then this is the end
       }
       return oldEl;
     }
@@ -584,12 +569,10 @@
           window.scrollBy(0, 999999);
         } else {
           for (var i = 1; i <= data.pageCount; ++i) {
-            document.querySelector('#pager select').appendChild(
-              Object.assign(
-                document.createElement('option'),
-                { value: i, innerText: `Page ${i}` }
-              )
-            )
+            var optionEl = document.createElement('option');
+            optionEl.value = i;
+            optionEl.innerText = `Page ${i}`;
+            document.querySelector('#pager select').appendChild(optionEl);
           }
           document.querySelector('#pager [name=page]').value = pagenum;
           if (pagenum != 1) {
@@ -608,8 +591,8 @@
         document.getElementById('title').innerText = title;
       },
       user(data) {
-        // TODO this might go away
-        console.log(data.name);
+        var style = userStyles(user);
+        addTo(style, document.head);
       },
       chara(data) {
         var style = charaStyles(data);
@@ -660,7 +643,7 @@
           }
         }
       },
-      error(err, fatal) {
+      error(err, willRetry) {
         console.error(err);
         setError(err);
       }
@@ -668,16 +651,15 @@
   </script>
 
   <!-- <input type="color"> polyfill -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bgrins/spectrum@1.8.0/spectrum.css" integrity="sha256-0gNW6jKGMP+oFR22hK5tl1qsZf21rWKR5cqmkyaLyjI=" crossorigin="anonymous">
-  <script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/gh/bgrins/spectrum@1.8.0/spectrum.js" integrity="sha256-3wWiHra+MxkTwcZwUQkkowAjnu5uqAF+6hE676OitiE=" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="/libraries/spectrum.css">
+  <script src="/libraries/jquery.min.js"></script>
+  <script src="/libraries/spectrum.js"></script>
 
   <!-- alert audio -->
-  <script src="https://cdn.jsdelivr.net/npm/howler@2.1.3/dist/howler.min.js" integrity="sha256-/Q4ZPy6sMbk627wHxuaWSIXS1y7D2KnMhsm/+od7ptE=" crossorigin="anonymous"></script>
+  <script src="/libraries/howler.min.js"></script>
   <script>
     var alertNoise = new Howl({
       src: ['https://cdn.glitch.com/0e12472f-d496-485a-a042-740bef658eb2%2Ftypewriter.mp3?v=1575714187192']
     });
   </script>
 </body>
-

@@ -112,7 +112,7 @@ api.post('/auth', express.json(), (req, res, next) => {
       // sameSite: 'strict',
     })
 
-    res.status(200).json(credentials);
+    res.json(credentials);
   }).catch(next);
 });
 
@@ -253,7 +253,7 @@ api.put('/rp/msgs', express.json(), (req, res, next) => {
   console.log(doc); 
   broadcast({ type: 'msgs', data: doc })
 
-  res.status(200).json(doc);
+  res.json(doc);
   
   if (!obj._id) { // if adding a new msg, send webhook 
     try {
@@ -279,7 +279,7 @@ api.put('/rp/charas', express.json(), (req, res, next) => {
   const [doc] = Charas.put(obj);
   broadcast({ type: 'charas', data: doc })
 
-  res.status(200).json(doc);
+  res.json(doc);
 });
 
 /**
@@ -290,7 +290,7 @@ api.put('/rp/webhook', express.json(), (req, res, next) => {
   const { webhook } = req.body;
   
   if (Webhooks.list().find(doc => doc.webhook === webhook)) {
-    return res.status(400).json({ error: 'That webhook was already added'});
+    throw new Error('That webhook was already added');
   }
   
   Webhooks.put({ webhook, userid });
@@ -328,7 +328,7 @@ api.get('/rp/msgs/:doc_id([a-z0-9-]+)/history', (req, res, next) => {
     const user = Users.find(msg.userid);
     if (user) msg.username = user.name;
   });
-  res.status(200).json(msgs);
+  res.json(msgs);
 });
 
 /**

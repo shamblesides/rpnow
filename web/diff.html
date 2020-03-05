@@ -86,9 +86,10 @@
       return reltime.format(-Math.round(t), label);
     }
     
-    RP.getMessageHistory(id).then(function(msgs) {
+    RP.getMessageHistory(id, function(msgs) {
       console.log(msgs);
       msgs.forEach(function (msg) {
+        // TODO do something different for images
         var el = document.querySelector('template#hist').content.cloneNode(true).querySelector('*');
         el.querySelector('i span').innerText = msg.username;
         el.querySelector('time').innerText = new Date(msg.timestamp).toLocaleString();

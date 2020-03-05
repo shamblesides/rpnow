@@ -2,6 +2,7 @@ window.RP = (function() {
   var exports = {};
   
   function isOK(xhr) {
+    // "ok" responses have a status code that is 200 - 299
     var firstDigit = Math.floor(xhr.status / 100);
     return firstDigit === 2;
   }
@@ -31,7 +32,7 @@ window.RP = (function() {
       err.status = this.status;
       reject(err);
     } else {
-      reject(new Error('Network error'));
+      reject(new Error('Connection error'));
     }
   }
   
@@ -78,19 +79,16 @@ window.RP = (function() {
       xhr.open('GET', url);
       xhr.send();
     })
-    .then(function () {
-      throw new Error('Server ended stream');
-    })
   }
 
   function auth(name) {
     var passcode = prompt('Please enter the passcode for this room:');
     if (passcode == null) {
-      return Promise.reject(new Error('Unauthorized'));
+      return Promise.reject(new Error('No passcode provided'));
     }
     if (!name) {
       name = prompt('And what is your name? (as in you, the writer?)')
-      if (!name) return Promise.reject(new Error('No name'))
+      if (!name) return Promise.reject(new Error('No name given'))
     }
     
     return requestWithJSON('POST', '/api/auth', { passcode: passcode, name: name })
@@ -129,50 +127,57 @@ window.RP = (function() {
         location.reload();
       }
     })
+    .then(function () {
+      // This stream isn't supposed to complete. If it does, that means that
+      // the request has terminated for some reason. So, throw an error.
+      throw new Error('Lost connection! Trying to reconnect...');
+    })
     .catch(function (err) {
-      if (err.status === 401) {
+      if (err.status === 401) { // Not logged in
         auth()
-        .then(retry)
+        .then(function() {
+          retry()
+        })
         .catch(function (err) {
-          onerror(err, true)
+          onerror(err)
         });
-      } else if (err.status) {
+      } else if (err.status) { // Server responded, but with some other error
+        onerror(err);
+      } else { // Connection error. We will retry
         onerror(err, true);
-      } else {
-        onerror(err, false);
         setTimeout(retry, 6000);
       }
     })
   }
 
-  exports.sendMessage = function sendMessage(data) {
+  exports.sendMessage = function sendMessage(data, callback) {
     return requestWithJSON('PUT', '/api/rp/msgs', data)
     .catch(alertError)
+    .then(callback)
   }
 
-  exports.sendChara = function sendChara(data) {
+  exports.sendChara = function sendChara(data, callback) {
     return requestWithJSON('PUT', '/api/rp/charas', data)
     .catch(alertError)
+    .then(callback)
   }
 
-  exports.getMessageHistory = function getMessageHistory(_id) {
+  exports.getMessageHistory = function getMessageHistory(_id, callback) {
     return request('GET', `/api/rp/msgs/${_id}/history`)
     .catch(alertError)
+    .then(callback)
   }
 
-  exports.changeTitle = function changeTitle(title) {
+  exports.changeTitle = function changeTitle(title, callback) {
     return requestWithJSON('PUT', '/api/rp/title', { title: title })
     .catch(alertError)
+    .then(callback)
   }
 
-  exports.addWebhook = function addWebhook(webhook) {
+  exports.addWebhook = function addWebhook(webhook, callback) {
     return requestWithJSON('PUT', '/api/rp/webhook', { webhook: webhook })
     .catch(alertError)
-  }
-
-  exports.importJSON = function importJSON(file) {
-    return request('POST', '/api/rp/import', file)
-    .catch(alertError)
+    .then(callback)
   }
   
   return exports;
