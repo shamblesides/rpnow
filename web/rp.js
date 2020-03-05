@@ -1,187 +1,183 @@
 window.RP = (function() {
   var exports = {};
-
-  var JSON_HEADERS = { 'Content-Type': 'application/json' };
-
-  var RESPONSE_OK = function (response) {
-    if (response.ok) {
-      return response
-    } else {
-      return response.text()
-      .then(function (data) {
-        var err = null;
-        try {
-          return JSON.parse(data).error || data;
-        } catch (parseErr) {
-          return data;
-        }
-      })
-      .then(function (text) {
-        throw new Error(`${response.status} ${response.statusText} - ${text}`);
-      })
-    }
-  };
-
-  var ALERT_ERROR = function (err) {
-    alert(err)
+  
+  function isOK(xhr) {
+    // "ok" responses have a status code that is 200 - 299
+    var firstDigit = Math.floor(xhr.status / 100);
+    return firstDigit === 2;
+  }
+  
+  function alertError(err) {
+    alert(err);
     throw err;
+  }
+  
+  function xhrPromiseResult(resolve, reject) {
+    if (isOK(this)) {
+      resolve(this.response)
+    } else if (this.status > 0) {
+      var details;
+      if (typeof this.response === 'object') {
+        details = this.response.error || JSON.stringify(details);
+      } else if (typeof this.response === 'string') {
+        try {
+          details = JSON.parse(this.response).error || this.response;
+        } catch (err) {
+          details = this.response;
+        }
+      } else {
+        details = this.response;
+      }
+      var err = new Error(`${this.status} ${this.statusText} - ${details}`);
+      err.status = this.status;
+      reject(err);
+    } else {
+      reject(new Error('Connection error'));
+    }
+  }
+  
+  function request(method, url, body, contentType) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.onloadend = xhrPromiseResult.bind(xhr, resolve, reject);
+      xhr.open(method, url);
+      xhr.responseType = 'json';
+      if (contentType) {
+        xhr.setRequestHeader('Content-Type', contentType);
+      }
+      if (body) {
+        xhr.send(body);
+      } else {
+        xhr.send();
+      }
+    });
+  }
+  
+  function requestWithJSON(method, url, bodyObject) {
+    return request(method, url, JSON.stringify(bodyObject), 'application/json');
   }
 
   function jsonStream(url, cb) {
-    // feature detection to possibly polyfill a version of fetch that supports streaming
-    var nativeFetchStreams = ('body' in Response.prototype);
-    var fetch = nativeFetchStreams ? window.fetch : window.fetchStream;
-    // console.log('Native fetch streams? ' + nativeFetchStreams)
-
-    return fetch(url).then(function(response) {
-      if (!response.ok) {
-        var err = new Error(response.status + ' ' + response.statusText)
-        err.response = response;
-        throw err;
+    var xhr = new XMLHttpRequest();
+    
+    var readFrom = 0;
+    
+    xhr.onprogress = function() {
+      if (this.status !== 200) return;
+      
+      var idx;
+      while (((idx = this.response.indexOf('\n', readFrom))) !== -1) {
+        var json = this.response.substring(readFrom, idx);
+        var obj = JSON.parse(json);
+        cb(obj);
+        readFrom = idx+1;
       }
-
-      var utf8 = new TextDecoder();
-      var reader = response.body.getReader();
-      var partial = '';
-
-      function loop() {
-        return reader.read().then(function(chunk) {
-          if (chunk.done) {
-            throw new Error('server ended stream');
-          }
-
-          partial += utf8.decode(chunk.value);
-          var lines = partial.split('\n');
-          partial = lines.pop();
-
-          lines.forEach(function (line) {
-            var json = line.trim();
-            if (json.length === 0) return;
-            var value = JSON.parse(json)
-            cb(value);
-          })
-
-          return loop();
-        })
-      }
-      return loop();
+    }
+    
+    return new Promise(function(resolve, reject) {
+      xhr.onloadend = xhrPromiseResult.bind(xhr, resolve, reject);
+      xhr.open('GET', url);
+      xhr.send();
     })
   }
 
-  function auth() {
+  function auth(name) {
     var passcode = prompt('Please enter the passcode for this room:');
     if (passcode == null) {
-      return Promise.reject(new Error('Unauthorized'));
+      return Promise.reject(new Error('No passcode provided'));
     }
-    return fetch('/api/auth', {
-      method: 'POST',
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ passcode: passcode }),
-    })
-    .then(function (res) {
-      return res.json().then(function (json) {
-        if (!res.ok) {
-          var retry = confirm(`Error: ${json.error}. Retry?`)
-          if (retry) {
-            return auth();
-          } else {
-            throw new Error(json.error);
-          }
-        }
-      });
+    if (!name) {
+      name = prompt('And what is your name? (as in you, the writer?)')
+      if (!name) return Promise.reject(new Error('No name given'))
+    }
+    
+    return requestWithJSON('POST', '/api/auth', { passcode: passcode, name: name })
+    .catch(function (err) {
+      var retry = confirm(`Failed to authenticate. Retry? (${err})`);
+      if (retry) {
+        return auth(name);
+      } else {
+        throw err;
+      }
     });
   }
 
-  exports.initialize = function initialize(callbacks) {
+  exports.initialize = function initialize(page, callbacks) {
+    var retry = initialize.bind(null, page, callbacks);
+    
+    var oninit = callbacks.init;
     var onmsg = callbacks.msg;
     var onchara = callbacks.chara;
     var ontitle = callbacks.title;
+    var onuser = callbacks.user;
     var onerror = callbacks.error;
-    jsonStream('/api/rp/chat', function(update) {
-      if (update.type === 'title') {
+    
+    jsonStream(`/api/rp?page=${page}`, function(update) {
+      if (update.type === 'init') {
+        oninit(update.data);
+      } else if (update.type === 'title') {
         ontitle(update.data);
       } else if (update.type === 'msgs') {
         onmsg(update.data);
       } else if (update.type === 'charas') {
         onchara(update.data);
+      } else if (update.type === 'users') {
+        onuser(update.data);
+      } else if (update.type === 'reload') {
+        location.reload();
       }
+    })
+    .then(function () {
+      // This stream isn't supposed to complete. If it does, that means that
+      // the request has terminated for some reason. So, throw an error.
+      throw new Error('Lost connection! Trying to reconnect...');
     })
     .catch(function (err) {
-      if (err.response && err.response.status === 401) {
-        auth().then(initialize.bind(null, callbacks))
+      if (err.status === 401) { // Not logged in
+        auth()
+        .then(function() {
+          retry()
+        })
         .catch(function (err) {
-          onerror(err, true)
+          onerror(err)
         });
-      } else {
-        onerror(err, false);
-        setTimeout(initialize.bind(null, callbacks), 2000);
+      } else if (err.status) { // Server responded, but with some other error
+        onerror(err);
+      } else { // Connection error. We will retry
+        onerror(err, true);
+        setTimeout(retry, 6000);
       }
     })
   }
 
-  function sendUpdate(type, body) {
-    return fetch('/api/rp/' + type, {
-      method: 'PUT',
-      headers: JSON_HEADERS,
-      body: JSON.stringify(body),
-    })
-    .then(RESPONSE_OK)
-    .then(function (response) { return response.json() })
-    .then(function (data) {
-      return data;
-    })
-    .catch(ALERT_ERROR);
+  exports.sendMessage = function sendMessage(data, callback) {
+    return requestWithJSON('PUT', '/api/rp/msgs', data)
+    .catch(alertError)
+    .then(callback)
   }
 
-  exports.sendMessage = function sendMessage(data) {
-    return sendUpdate('msgs', data);
+  exports.sendChara = function sendChara(data, callback) {
+    return requestWithJSON('PUT', '/api/rp/charas', data)
+    .catch(alertError)
+    .then(callback)
   }
 
-  exports.sendChara = function sendChara(data) {
-    return sendUpdate('charas', data);
+  exports.getMessageHistory = function getMessageHistory(_id, callback) {
+    return request('GET', `/api/rp/msgs/${_id}/history`)
+    .catch(alertError)
+    .then(callback)
   }
 
-  exports.getMessageHistory = function getMessageHistory(_id) {
-    return fetch('/api/rp/msgs/' + _id + '/history')
-    .then(RESPONSE_OK)
-    .then(function (response) { return response.json() })
-    .catch(ALERT_ERROR);
+  exports.changeTitle = function changeTitle(title, callback) {
+    return requestWithJSON('PUT', '/api/rp/title', { title: title })
+    .catch(alertError)
+    .then(callback)
   }
 
-  exports.changeTitle = function changeTitle(title) {
-    return fetch('/api/rp/title', {
-      method: 'PUT',
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ title: title }),
-    })
-    .then(RESPONSE_OK)
-    .catch(ALERT_ERROR);
-  }
-
-  exports.addWebhook = function addWebhook(webhook) {
-    return fetch('/api/rp/webhook', {
-      method: 'PUT',
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ webhook: webhook }),
-    })
-    .then(RESPONSE_OK)
-    .catch(ALERT_ERROR);
-  }
-
-  exports.getPage = function getPage(pageNumber) {
-    return fetch('/api/rp/pages/' + pageNumber)
-    .then(RESPONSE_OK)
-    .then(function (response) { return response.json() })
-    .catch(ALERT_ERROR);
-  }
-
-  exports.importJSON = function importJSON(file) {
-    return fetch('/api/rp/import', {
-      method: 'POST',
-      body: file,
-    })
-    .then(RESPONSE_OK)
-    .catch(ALERT_ERROR);
+  exports.addWebhook = function addWebhook(webhook, callback) {
+    return requestWithJSON('PUT', '/api/rp/webhook', { webhook: webhook })
+    .catch(alertError)
+    .then(callback)
   }
   
   return exports;

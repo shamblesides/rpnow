@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Revision History</title>
+  <style>
+    body {
+      margin: auto;
+      max-width: 400px;
+    }
+    blockquote, code {
+      margin: 30px;
+      display: block;
+      width: 100%;
+    }
+    code {
+      font-size: inherit;
+    }
+    #show-raw:checked ~ ol blockquote,
+    #show-raw:not(:checked) ~ ol code {
+      display: none;
+    }
+    /***** Generated action tags in messages *****/
+    .message-star-tag {
+      padding: 0.1em 0.3em;
+      border-radius: 8px;
+      opacity: 0.9;
+      border: 1px solid rgba(0,0,0,0.2);
+      box-shadow:2px 2px 4px rgba(0,0,0,0.03);
+    }
+    .message-star-tag::before,
+    .message-star-tag::after {
+      content: '*';
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Revision History</h1>
+  
+  <input type="checkbox" id="show-raw"> <label for="show-raw">Show Raw</label>
+  
+  <ol></ol>
+  
+  <template id="hist">
+    <li>
+      <i>Posted by: <span></span></i>
+      <br>
+      <time></time>
+      <blockquote></blockquote>
+      <code></code>
+    </li>
+  </template>
+  
+  <script src="rp.js"></script>
+  <script src="format-rp-message.js"></script>
+
+  <script>
+    var query = {};
+    location.search.substr(1).split("&").forEach(function(x) { x=x.split('='); query[x[0]] = decodeURIComponent(x[1]) });
+    
+    var id = query['id'];
+    
+    var reltime = Intl.RelativeTimeFormat
+      ? new Intl.RelativeTimeFormat()
+      : { format(n, unit) { return (-n) + ' ' + unit + 's ago' } };
+    
+    function timeAgoText(timestamp) {
+      // close enough
+      var periods = [
+        {label: 'seconds', div: 60},
+        {label: 'minutes', div: 60},
+        {label: 'hours', div: 24},
+        {label: 'days', div: 30},
+        {label: 'months', div: 12},
+        {label: 'years', div: Infinity},
+      ];
+
+      var t = (Date.now() - new Date(timestamp).getTime()) / 1000;
+
+      while (Math.round(t) >= periods[0].div) t /= periods.shift().div;
+
+      var label = periods[0].label;
+      
+      return reltime.format(-Math.round(t), label);
+    }
+    
+    RP.getMessageHistory(id, function(msgs) {
+      console.log(msgs);
+      msgs.forEach(function (msg) {
+        // TODO do something different for images
+        var el = document.querySelector('template#hist').content.cloneNode(true).querySelector('*');
+        el.querySelector('i span').innerText = msg.username;
+        el.querySelector('time').innerText = new Date(msg.timestamp).toLocaleString();
+        el.querySelector('time').innerText += ` (${timeAgoText(msg.timestamp)})`;
+        el.querySelector('time').datetime = msg.timestamp;
+        el.querySelector('blockquote').innerHTML = formatRpMessage(msg.content);
+        el.querySelector('code').innerText = msg.content;
+        document.querySelector('ol').appendChild(el);
+      })
+    })
+  </script>
+</body>

@@ -1,27 +1,15 @@
 NEXT
 ----
-ask for username upon auth, instead of doing the SOUL COLORS
-send message upon new device auth'ing
-chara edit dialog not poppin up in big screen mode
-grey *actions* for narrator/ooc
-fix import/export/txt with the new DB format
-incorporate RP import
-wait on RP import
-RP should import/export webhooks
+forbid editing other users' mesages?
+forbid editing "login" msgs
+db import frontend
+destroy all TODOs in the code
 rpnow3 (other project) should import/export webhooks
-README
-fix localStorageSync
 go through console errors
+read through source and clean up the bits
+ * console.log
+ * commented-out code
+ * outdated comments
 demo mode
-
-
-MAYBE: VIEW LAYER
------------------
-create vendor folder for www deps (search project for jsdelivr) (make sure to add them to prefetch!)
-web component version of color picker
-move all side-effects out of vue layer
-convert vue to superfine + (some state management, possibly effector)
-though also consider preact bundled with htm: unpkg.com/htm/preact/standalone.module.js (iOS9 supports class{} !)
-or: zero dep option: insertAdjacentHTML / outerHTML. Combine with templating for safe user strings (Mustache.js? or custom)
-we may not even need to parse HTML if we just do document.querySelector('template').content.cloneNode(true) (downside: how to use template on multiple pages?? maybe: just do a SPA) (but that's hard!!!)
-(remember that .querySelector is actually on all html elements!!!)
+TOS https://glitch.com/legal/
+ * "In particular, the information under the heading : User Content: “You have the right to let us use your content. We don’t warrant other user’s content.”"

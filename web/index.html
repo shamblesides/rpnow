@@ -5,97 +5,661 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="My RP">
-  <link rel="icon" sizes="32x32" href="favicon/favicon-32x32.png">
-  <link rel="icon" sizes="128x128" href="favicon/favicon-128x128.png">
-  <link rel="apple-touch-icon" href="favicon/favicon-128x128.png">
-  <link rel="stylesheet" href="styles.css">
   <title>Loading...</title>
-  <noscript><style>.js-only { display: none !important; }</style></noscript>
+  <link rel="stylesheet" href="styles.css">
+  <noscript>
+    <!-- TODO decide on no-js strategy -->
+    <style>.js-only { display: none !important; }</style>
+  </noscript>
 </head>
 
-<div id="app">
-  <!-- Minimal shell to make the loading screen look similar to the app as it is loaded -->
-  <div id="main-column">
-    <div id="chat-header"></div>
-    <div id="messages">
-      <noscript>
-        <div class="notice">
-          You must enable javascript to use this site.
-        </div>
-      </noscript>
-      <div class="notice js-only">
-        <span class="emoji">⏳</span> Loading application...
-      </div>
-    </div>
-  </div>
-  <div id="haracter-menu" class="drawer drawer-right drawer-dock-1024">
-    <div class="drawer-header">
-      <span>Characters</span>
-    </div>
-    <div class="drawer-body"></div>
-  </div>
-</div>
+<body>
+  <!-- TODO consider making this non-sticky -->
+  <header>
+    <button onclick="openPopup('main-menu')" data-page="chat">≡</button>
+    <a href="/" class="button" data-page="archive">❮</a>
+    <h1 id="title"></h1>
+  </header>
+  
+  <!-- TODO maybe the chat page is just the final "page" of the archive. To unify things. -->
+  <nav id="pager" data-page="archive">
+    <a class="icon-button" id="prev-page">←</a>
+    <form>
+      <select name="page" onchange="this.closest('form').submit()"></select>
+    </form>
+    <a class="icon-button" id="next-page">→</a>
+  </nav>
+  
+  <aside class="error"></aside>
 
-<script>
-  // immediately apply dark mode setting to loading screen
-  try {
-    var val = JSON.parse(localStorage.getItem('rpnow.nightMode'));
-    document.getElementById('app').classList.toggle('dark-theme', val);
-  } catch (err) {}
-</script>
+  <form id="send-box" class="chara-bg" onsubmit="sendMessage(event)" data-page="chat">
+    <input type="hidden" name="type" value="text">
+    <button type="button" class="change-chara chara-name" onclick="openPopup('character-menu')"></button>
+    <button type="button" class="icon-button" onclick="openPopup('image-dialog')">🖼️</button>
+    <textarea name="content" rows="3" maxlength="10000" required placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist="sendBoxText"></textarea>
+    <button type="submit">➤</button> <!-- TODO ⏳ -->
+  </form>
+  
+  <form id="image-dialog" class="dialog" oninput="preview.querySelector('img').src=(this.checkValidity() ? url.value : '')" onreset="preview.querySelector('img').src=''" onsubmit="sendImage(event)" data-page="chat">
+    <h3>Image URL</h3>
+    <input type="hidden" name="type" value="image">
+    <input type="hidden" name="_id">
+    <input name="url" type="url" ref="urlbox" required placeholder="Enter a URL">
+    <output name="preview" for="url">
+      <img alt="Image preview">
+    </output>
+    <button type="submit" class="text-button">Send ➤</button>
+    <button type="reset" class="text-button" onclick="closeMe(event)">Cancel ✘</button>
+  </form>
 
-<script>
+  <!-- TODO consider dissolving this into some links at the top of the page -->
+  <section id="main-menu" class="drawer drawer-left" data-page="chat">
+    <header>
+      <h2>Menu</h2>
+      <button class="close-button" onclick="closeMe(event)" title="Close">×</button>
+    </header>
+
+    <div class="drawer-body">
+      <a href="?page=1">
+        📚 Browse archive
+      </a>
+      <a href="format.html" target="_blank">
+        🎀 View formatting info
+      </a>
+      <details>
+        <summary>📃 Download .TXT</summary>
+        <form action="/api/rp/download.txt" target="_blank">
+          <label>
+            <input type="checkbox" name="includeOOC" value="true" checked>
+            Include OOC messages
+          </label>
+          <br>
+          <button type="submit" class="text-button">Download</button>
+        </form>
+      </details>
+      <hr/>
+      <button onclick="openTitleDialog()">
+        📓 Change story title...
+      </button>
+      <button onclick="openWebhookDialog()">
+        🌐 Add Discord webhook...
+      </button>
+      <details>
+        <summary>🚢 Import database</summary>
+        <form action="/api/rp/import" method="POST" enctype="multipart/form-data">
+          <input type="file" name="file" accept=".txt" required>
+          <br>
+          <button type="submit" class="text-button">Upload</button>
+        </form>
+      </details>
+      <details>
+        <summary>📦 Export database</summary>
+        <form action="/api/rp/export" method="POST" target="_blank">
+          <p>
+            This will download all RP data and history in a format that can be imported into a new server.
+          </p>
+          <button type="submit" class="text-button">Download</button>
+        </form>
+      </details>
+      <hr/>
+      <label>
+        🌒 Night mode
+        <input type="checkbox" data-persist="nightMode" onchange="darkMode(event.target.checked)"/>
+      </label>
+      <label>
+        🔈 Audio Alerts
+        <input type="checkbox" id="audio-alerts" data-persist="audioAlerts"/>
+      </label>
+      <label>
+        ⏩ Quick send
+        <input type="checkbox" id="quicksend" data-persist="quicksend"/>
+      </label>
+    </div>
+  </section>
+
+  <!-- TODO consider dropping this drawer in favor of a simple select tag -->
+  <section id="character-menu" class="drawer drawer-right drawer-dock-1024" data-page="chat">
+    <header>
+      <h2>Characters</h2>
+      <button class="close-button" onclick="closeMe(event)" title="Close">×</button>
+    </header>
+
+    <div class="drawer-body">
+      <label>
+        <input type="radio" form="send-box" name="who" value="narrator" onchange="selectSpeaker(this.value)">
+        Narrator
+      </label>
+      <label>
+        <input type="radio" form="send-box" name="who" value="ooc" onchange="selectSpeaker(this.value)">
+        Out of Character
+      </label>
+      <hr/>
+      <details id="new-chara">
+        <summary>🆕 New Character...</summary>
+        <form onsubmit="sendChara(event)">
+          <label>
+            Name <input type="text" name="name" maxlength="30" required> <br/>
+          </label>
+          <label>
+            Color <input type="color" name="color" value="#bbeeff"> <br/>
+          </label>
+          <button type="submit" class="text-button">Create ➔</button>
+          <button type="reset" class="text-button" onclick="this.closest('details').open = false">Cancel ✘</button>
+        </form>
+      </details>
+    </div>
+  </section>
   
-  // We will be dynamically adding polyfills to this page
+  <aside id="archive-info" class="notice" style="display:none" data-page="chat">
+    More messages available in the <a href="?page=1" data-page="chat">Archive</a>
+  </aside>
+
+  <main>
+    <p id="loading-messages" class="notice">
+      <span class="emoji">⏳</span> Loading messages...
+    </p>
+    <div id="no-messages" class="notice">
+      <h2>Nothing here yet</h2>
+      <p>It's time to start writing!</p>
+    </div>
+  </main>
   
-  function addScriptTag(src, integrity, dataset) {
-    var s = document.createElement('script');
-    s.src = src;
-    if (integrity) s.integrity = integrity;
-    if (dataset) Object.assign(s.dataset, dataset);
-    s.crossOrigin = 'anonymous';
-    s.defer = true;
-    document.body.appendChild(s);
-  }
+  <div class="overlay drawer-overlay" data-what="drawer" onclick="closePopup(event)"></div>
   
-  // A bunch of polyfills!
+  <div class="overlay dialog-overlay" data-what="dialog" onclick="closePopup(event)"></div>
+
+  <!-- Templates should go below all elements -->
+  <!-- (Because of an iOS9 bug!) -->
+  <!-- https://stackoverflow.com/questions/60023595 -->
+
+  <template id="msg-text">
+    <div class="message chara-bg">
+      <button class="history-button" onclick="showHistory(event)">edits</button>
+      <button class="edit-button icon-button" onclick="toggleEditing(event)">✎</button>
+      <div class="chara-name"></div>
+      <div class="user-name"></div>
+      <blockquote></blockquote>
+      <form class="edit-message" onsubmit="sendEditedMessage(event)">
+        <input type="hidden" name="_id">
+        <input type="hidden" name="type">
+        <input type="hidden" name="who">
+        <textarea name="content" maxlength="10000" rows="3" onkeydown="quicksend(event)"></textarea>
+        <button type="submit" class="text-button">Save ➔</button>
+        <button type="reset" class="text-button" onclick="toggleEditing(event)">Cancel ✘</button>
+      </form>
+    </div>
+  </template>
+
+  <template id="msg-image">
+    <div class="message">
+      <button class="history-button" onclick="showHistory(event)">edits</button>
+      <button class="edit-button icon-button" onclick="editImage(event)">✎</button>
+      <img alt="User posted image">
+    </div>
+  </template>
+
+  <template id="msg-login">
+    <div class="notice">
+      New device credentials from user named "<span class="user-name"></span>"
+    </div>
+  </template>
+
+  <template id="chara-button">
+    <div class="chara-row">
+      <label>
+        <input type="radio" form="send-box" name="who" onchange="selectSpeaker(this.value)">
+        <span class="chara-name"></span>
+        <button class="icon-button" onclick="toggleEditing(event)">✎</button>
+      </label>
+      <form onsubmit="sendEditedChara(event)">
+        <input type="hidden" name="_id">
+        <label>
+          Name <input type="text" name="name" maxlength="30" required> <br/>
+        </label>
+        <label>
+          Color <input type="color" name="color" value="#bbeeff"> <br/>
+        </label>
+        <button type="submit" class="text-button">Save ➔</button>
+        <button type="reset" class="text-button" onclick="toggleEditing(event)">Cancel ✘</button>
+      </form>
+    </div>
+  </template>
+
+  <!-- TODO Import (dialog?) -->
+
+  <script>
+    function setError(error) {
+      document.querySelector('aside.error').innerText = (error || '').toString();
+    }
+    window.onerror = setError
+  </script>
+
+  <script>
+    function openPopup(id) {
+      document.getElementById(id).classList.toggle('open');
+      document.getElementById(id).querySelector('button,input,a').focus();
+    }
+    function closePopup(event) {
+      var className = event.target.dataset.what;
+      Array.from(document.getElementsByClassName(className))
+      .forEach(closeElement);
+    }
+    function closeMe(event) {
+      closeElement(event.target.closest('.drawer, .dialog'));
+    }
+    function closeElement(el) {
+      if (el && el.classList.contains('open')) {
+        if (el.tagName === 'FORM') el.reset();
+        el.classList.remove('open');
+      }
+    }
+    function toggleEditing(event) {
+      event.target.closest('.message, .chara-row').classList.toggle('editing');
+    }
+    function editImage(event) {
+      var message = event.target.closest('.message');
+      var src = message.querySelector('img').src;
+      document.getElementById('image-dialog').elements['_id'].value = message.id;
+      document.getElementById('image-dialog').elements['url'].value = src;
+      document.getElementById('image-dialog').elements['preview'].children[0].src = src;
+      openPopup('image-dialog');
+    }
+    function darkMode(isDark) {
+      document.body.classList.toggle('dark-theme', isDark);
+    }
+    function quicksend(event, applySetting) {
+      if (event.key !== 'Enter' || event.shiftKey) return;
+      if (event.ctrlKey || (applySetting && document.querySelector('#quicksend').checked)) {
+        event.preventDefault();
+        event.target.closest('form').dispatchEvent(new Event('submit'));
+      }
+    }
+    function selectSpeaker(speaker) {
+      var form = document.querySelector('#send-box')
+      form.className = 'chara-bg '+speaker;
+      form.elements.who.value = speaker;
+    }
+    function openTitleDialog() {
+      var title = prompt('Enter the title for this RP:', document.getElementById('title').innerText);
+      if (title != null) {
+        RP.changeTitle(title);
+      }
+    }
+    function openWebhookDialog() {
+      var webhook = prompt('Webhook URL, please:');
+      if (webhook) {
+        RP.addWebhook(webhook, function() {
+          alert('Webhook added successfully')
+        })
+      }
+    }
+    function sendMessage(event) {
+      event.preventDefault();
+      var args = {
+        type: event.target.elements.type.value,
+        who: event.target.elements.who.value,
+        content: event.target.elements.content.value,
+      }
+      // this will modify args if we are using an OOC shortcut
+      if (args.who !== 'ooc') {
+        var newContent = [
+          /^\({2,}\s*([\s\S]*?[^\s])\s*\)*$/g, // (( message text ))
+          /^\{+\s*([\s\S]*?[^\s])\s*\}*$/g, // { message text }, {{ message text }}, ...
+          /^\/\/\s*([\s\S]*[^\s])\s*$/g // //message text
+        ].map(function (regex) {
+          var match = regex.exec(args.content);
+          if (!match) return null;
+          else return match[1];
+        }).find(function (match) {
+          return match != null;
+        });
+        if (newContent) {
+          args.who = 'ooc';
+          args.content = newContent;
+        }
+      }
+      RP.sendMessage(args, function() {
+        event.target.querySelector('[name=content]').value = '';
+        try { localStorage.removeItem('rpsettings.sendBoxText') } catch (err) {}
+      });
+    }
+    function sendEditedMessage(event) {
+      toggleEditing(event);
+      event.preventDefault();
+      RP.sendMessage({
+        _id: event.target.elements._id.value,
+        type: event.target.elements.type.value,
+        who: event.target.elements.who.value,
+        content: event.target.elements.content.value,
+      });
+    }
+
+    function sendImage(event) {
+      event.preventDefault();
+      var args = {
+        _id: event.target.elements._id.value || undefined,
+        type: event.target.elements.type.value,
+        url: event.target.elements.url.value,
+      };
+      RP.sendMessage(args, function() {
+        event.target.reset();
+        closeMe(event);
+      })
+    }
+    
+    function sendChara(event) {
+      event.preventDefault();
+      RP.sendChara({
+        name: event.target.elements.name.value,
+        color: event.target.elements.color.value,
+      }, function() {
+        event.target.querySelector('[name=name]').value = '';
+      })
+    }
+    function sendEditedChara(event) {
+      toggleEditing(event);
+      event.preventDefault();
+      RP.sendChara({
+        _id: event.target.elements._id.value,
+        name: event.target.elements.name.value,
+        color: event.target.elements.color.value,
+      })
+    }
+    function showHistory(event) {
+      var id = event.target.closest('.message').id;
+      window.open(`diff.html?id=${id}`, '_blank');
+    }
+  </script>
   
-  try { TextEncoder } catch (ex) {
-    addScriptTag(
-      "https://cdn.jsdelivr.net/npm/text-encoding@0.7.0/lib/encoding.js",
-      "sha256-E9b12NeEmrVSXHs978RmbR1TsqL7+Xd+tHA5lWzi0Mc="
-    );
-  }
-  try { fetch } catch (ex) {
-    addScriptTag(
-      "https://cdn.jsdelivr.net/npm/whatwg-fetch@3.0.0/dist/fetch.umd.js",
-      "sha256-mgxDAbboBKeoCOtpaU7QhWdgWBGum+8dPxnIjiC97JI="
-    );
-  }
-  try { ReadableStream } catch (ex) {
-    addScriptTag(
-      "https://cdn.jsdelivr.net/npm/web-streams-polyfill@2.0.6/dist/polyfill.min.js",
-      "sha256-zAIrVOzXBA0qU8c/qYEjWbrGXGaRofFgf44jqGCCVEI="
-    );
-  }
-  try { Response.prototype.body } catch (ex) {
-    addScriptTag(
-      "https://cdn.jsdelivr.net/npm/fetch-readablestream@0.2.0/dist/fetch-readablestream.js",
-      "sha256-4BecP76XqkCxNLLYAOlCkG7KbILJ9Be1rjZ4ylNXY+Q="
-    );
-  }
+  <script>
+    darkMode(localStorage.getItem('rpsettings.nightMode') === 'true')
+  </script>
   
-  // Load main.js, using shimport if necessary for browsers without ES6 modules
-  // (This limits us to an odd syntax where we want to support ES5 browsers but can still use the ES6 module system)
-  
-  try {
-    new Function('import("./main.js")')()
-  } catch (ex) {
-    addScriptTag(
-      "https://cdn.jsdelivr.net/npm/shimport@1.0.1/index.js",
-      "sha256-5dlrmz8rgQgD4A3xwojOIsdWd8WR5iMpM+dM7sTeMik=",
-      { main: "./main.js" }
-    );
-  }
-  
-</script>
+  <script>
+    var query = {};
+    location.search.substr(1).split("&").forEach(function(x) { x=x.split('='); query[x[0]] = decodeURIComponent(x[1]) });
+    
+    var pagenum = parseInt(query['page']) || null;
+    if (pagenum) {
+      document.body.dataset.pagenum = pagenum;
+      
+      Array.from(document.querySelectorAll('[data-page]:not([data-page=archive])'))
+      .forEach(function(el) {
+        el.remove();
+      })
+    } else {
+      selectSpeaker('narrator');
+      
+      Array.from(document.querySelectorAll('[data-page]:not([data-page=chat])'))
+      .forEach(function(el) {
+        el.remove();
+      })
+    }
+    Array.from(document.querySelectorAll('[data-page]'))
+    .forEach(function(el) {
+      el.removeAttribute('data-page');
+    })
+  </script>
+
+  <script>
+    Array.from(document.querySelectorAll('[data-persist]'))
+    .forEach(function (input) {
+      var storageKey = 'rpsettings.' + input.dataset.persist;
+      var inputProp = (input.type === 'checkbox') ? 'checked' : 'value';
+      function onchange() {
+        localStorage.setItem(storageKey, input[inputProp]);
+      }
+      input.addEventListener('change', onchange);
+      if (input.tagName.toLowerCase() === 'textarea') {
+        input.addEventListener('input', onchange);
+      }
+      if (localStorage.getItem(storageKey) != null) {
+        if (input.type === 'checkbox') {
+          input.checked = (localStorage.getItem(storageKey) === 'true');
+        } else {
+          input.value = localStorage.getItem(storageKey);
+        }
+      }
+    });
+  </script>
+
+  <script>
+    // This is a bunch of stuff for the auto-resizing of the textbox
+
+    function autosizeTextarea(event, minRows, maxRows) {
+      var el = event.target;
+      while (el.rows > minRows && el.scrollHeight <= el.offsetHeight) {
+        el.rows = el.rows - 1;
+      }
+      while (el.rows < maxRows && el.scrollHeight > el.offsetHeight) {
+        el.rows = el.rows + 1;
+      }
+    }
+
+    window.requestAnimationFrame((function update(lastHeight) {
+      var el = document.querySelector('#send-box');
+      if (!el) return;
+      var height = el.clientHeight;
+      if (height !== lastHeight) {
+        document.body.style.marginBottom = (height + 30)+'px';
+        window.scrollBy(0, height-lastHeight);
+      }
+      window.requestAnimationFrame(update.bind(null, height));
+    }).bind(null, 0));
+  </script>
+
+  <script src="rp.js"></script>
+  <script src="format-rp-message.js"></script>
+
+  <script>
+    function contrast(color) {
+      var rgb = color.match(/\w\w/g).map(function(n) { return parseInt(n, 16) });
+      var brightness = (rgb[0]*299 + rgb[1]*587 + rgb[2]*114);
+      return (brightness < 128*1000) ? 'white' : 'black';
+    }
+    function escapeStringCSS(str) {
+      return str
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\s/g, ' ')
+    }
+    function charaStyles(data) {
+      var style = document.createElement('style');
+      style.id = 'styles-' + data._id;
+      style.innerHTML = `
+        .${data._id}.chara-bg,
+        .${data._id} .chara-bg {
+          color: ${contrast(data.color)} !important;
+          background-color: ${data.color} !important;
+        }
+        .${data._id}.chara-text,
+        .${data._id} .chara-text {
+          color: ${data.color} !important;
+        }
+        .${data._id}.chara-name::before,
+        .${data._id} .chara-name::before {
+          content: "${escapeStringCSS(data.name)}";
+        }`
+      return style;
+    }
+    function userStyles(data) {
+      var style = document.createElement('style');
+      style.id = 'styles-' + data._id;
+      style.innerHTML = `
+        [data-userid=${data._id}].user-name::before,
+        [data-userid=${data._id}] .user-name::before {
+          content: "${escapeStringCSS(data.name)}";
+        }`
+      return style;
+    }
+    function buildCharaButton(data) {
+      var el = document.querySelector('template#chara-button').content.cloneNode(true).querySelector('*');
+      el.id = data._id;
+      el.dataset.rev = data._rev;
+      el.classList.add(data._id);
+      el.querySelector('input[type=radio]').value = data._id;
+      el.querySelector('form [name=_id]').value = data._id;
+      el.querySelector('form [name=name]').defaultValue = data.name;
+      el.querySelector('form [name=color]').defaultValue = data.color;
+      return el;
+    }
+    function buildMessageElement(data) {
+      var template = document.querySelector('template#msg-'+data.type) || document.querySelector('template#msg-unknown');
+      var el = template.content.cloneNode(true).querySelector('*');
+      el.id = data._id;
+      el.dataset.rev = data._rev;
+      el.dataset.userid = data.userid;
+      if (data.type === 'text') {
+        el.dataset.who = data.who;
+        el.classList.add(data.who);
+        el.querySelector('form [name=_id]').value = data._id;
+        el.querySelector('form [name=type]').value = data.type;
+        el.querySelector('form [name=who]').value = data.who;
+        el.querySelector('form [name=content]').defaultValue = data.content;
+        el.querySelector('blockquote').innerHTML = formatRpMessage(data.content);
+      } else if (data.type === 'image') {
+        el.querySelector('img').src = data.url;
+      } else if (data.type === 'login') {
+        // nothing special I guess
+      }
+      return el;
+    }
+    function addTo(el, container, before) {
+      var oldEl = document.getElementById(el.id)
+      if (oldEl) {
+        if (el.dataset.rev && oldEl.dataset.rev == el.dataset.rev) {
+          // then just ignore the new element, it should be exactly the same
+        } else {
+          container.replaceChild(el, oldEl);
+        }
+      } else {
+        container.insertBefore(el, before || null); // if "before" is null, then this is the end
+      }
+      return oldEl;
+    }
+    RP.initialize(pagenum || 0, {
+      init(data) {
+        setError(null);
+        document.title = data.title;
+        document.getElementById('title').innerText = data.title;
+        for (var user of data.users) {
+          var style = userStyles(user);
+          addTo(style, document.head);
+        }
+        for (var ch of data.charas) {
+          var style = charaStyles(ch);
+          addTo(style, document.head);
+
+          var menu = document.querySelector('#character-menu .drawer-body');
+          if (menu) {
+            var el = buildCharaButton(ch);
+            addTo(el, menu, menu.querySelector('#new-chara'));
+          }
+        }
+        for (var msg of data.msgs) {
+          var main = document.querySelector('main');
+          var el = buildMessageElement(msg);
+          addTo(el, main);
+        }
+        if (data.msgs.length === 10) {
+          document.querySelector('#archive-info').style.display = '';
+        }
+        
+        if (!pagenum) {
+          window.scrollBy(0, 999999);
+        } else {
+          for (var i = 1; i <= data.pageCount; ++i) {
+            var optionEl = document.createElement('option');
+            optionEl.value = i;
+            optionEl.innerText = `Page ${i}`;
+            document.querySelector('#pager select').appendChild(optionEl);
+          }
+          document.querySelector('#pager [name=page]').value = pagenum;
+          if (pagenum != 1) {
+            document.querySelector('#pager #prev-page').href = `?page=${pagenum-1}`;
+          }
+          if (pagenum < data.pageCount) {
+            document.querySelector('#pager #next-page').href = `?page=${pagenum+1}`;
+          }
+        }
+        if (document.getElementById('loading-messages')) {
+          document.getElementById('loading-messages').remove();
+        }
+      },
+      title(title) {
+        document.title = title;
+        document.getElementById('title').innerText = title;
+      },
+      user(data) {
+        var style = userStyles(user);
+        addTo(style, document.head);
+      },
+      chara(data) {
+        var style = charaStyles(data);
+        addTo(style, document.head);
+        
+        var menu = document.querySelector('#character-menu .drawer-body');
+        if (menu) {
+          var el = buildCharaButton(data);
+          var oldEl = addTo(el, menu, menu.querySelector('#new-chara'));
+          if (oldEl && oldEl.querySelector('input[type=radio]').checked) {
+            el.querySelector('input[type=radio]').checked = true;
+          }
+        }
+      },
+      msg(data) {
+        var wasAtBottom =
+            document.documentElement.offsetHeight -
+            Math.ceil(window.innerHeight + window.scrollY) < 31;
+        
+        var main = document.querySelector('main');
+        var el = buildMessageElement(data);
+        var oldEl = addTo(el, main);
+        
+        if (!oldEl) {
+          if (!pagenum) {
+            // only keep 10 msgs
+            while (main.childNodes.length > 10) {
+              main.firstChild.remove();
+            }
+            if (main.childNodes.length === 10) {
+              document.querySelector('#archive-info').style.display = '';
+            }
+          }
+          // if we were previously at the bottom of the page, scroll back down there
+          if (wasAtBottom && pagenum == null) {
+            window.scrollBy(0, 999999);
+          }
+
+          // we show an alert if...
+          var isVisible = document.visibilityState === 'visible';
+          if (!isVisible) {
+            if (('alertNoise' in window) && (document.getElementById('audio-alerts') || {}).checked) { // might not have loaded yet!
+              alertNoise.play();
+            }
+
+            // TODO other notification methods
+            // like favicon image, title text, notification api
+          }
+        }
+      },
+      error(err, willRetry) {
+        console.error(err);
+        setError(err);
+      }
+    })
+  </script>
+
+  <!-- <input type="color"> polyfill -->
+  <link rel="stylesheet" href="/libraries/spectrum.css">
+  <script src="/libraries/jquery.min.js"></script>
+  <script src="/libraries/spectrum.js"></script>
+
+  <!-- alert audio -->
+  <script src="/libraries/howler.min.js"></script>
+  <script>
+    var alertNoise = new Howl({
+      src: ['https://cdn.glitch.com/0e12472f-d496-485a-a042-740bef658eb2%2Ftypewriter.mp3?v=1575714187192']
+    });
+  </script>
+</body>

@@ -1,15 +1,56 @@
 const express = require('express');
+const compression = require('compression');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const upload = require('multer')({ dest: os.tmpdir() });
 const { generateTextFile } = require('./services/txt-file');
-const { exportRp, importRp } = require('./services/json-file');
 const Store = require('./services/storage');
 const validate = require('./services/validate-user-documents');
 const { generateToken, authMiddleware, checkPasscode } = require('./services/auth')(process.env.PASSCODE);
 const discordWebhooks = require('./services/discord-webhooks');
 
+const CHAT_SCROLLBACK = 10;
+const PAGE_LENGTH = 20;
+
+// Message bus. Users connect upon entering chat
+const rpListeners = new Set();
+
+function broadcast(obj) {
+  rpListeners.forEach(fn => fn(obj))
+}
+
+// DB tables
+const dbFilepath = path.resolve('.data/db');
+let db;
+let Msgs;
+let SystemMsgs;
+let Charas;
+let Users;
+let Webhooks;
+const getTitle = () => (db.find('title') || { title: 'My New Story' }).title;
+const setTitle = (title) => db.put({ _id: 'title', title });
+
+function loadDB() {
+  db = Store(dbFilepath);
+  
+  // TODO attach broadcast() directly to db table defs
+  // TODO db.group('m-').constrain????(validate.userMsg????)
+  Msgs = db.group('m-', validate.msg)
+  SystemMsgs = db.group('m-', validate.systemMsg)
+  Charas = db.group('c-', validate.chara)
+  Users = db.group('u-', validate.user);
+  Webhooks = db.group('webhook-', validate.webhook)
+}
+
+loadDB();
+
 // Express is our HTTP server
 const server = express();
+
+// compress
+server.use(compression());
 
 // Add x-robots-tag header to all pages served by app 
 server.use((req, res, next) => {
@@ -26,33 +67,8 @@ server.use((req, res, next) => {
   }
 });
 
-// Attach prefetch headers to load frontend files more quickly
-const prefetchHeader = [
-  ...fs.readdirSync('web/components').map(f => `components/${f}`),
-  ...fs.readdirSync('web')
-].filter(f => f.endsWith('.js') || f.endsWith('.css'))
-.map(f => {
-  const type = ({js:'script',css:'style'})[f.split('.').pop()];
-  return `<${f}>; rel=prefetch; as=${type}`;
-})
-.join(', ');
-
-server.get('/', (req, res, next) => {
-  res.set('Link', prefetchHeader);
-  next();
-})
-
 // Serve frontend HTML, etc
-server.use('/', express.static('web', { index: 'index2.html' }));
-
-// DB tables
-const db = Store('./.data/db');
-
-const Msgs = db.group('m-', validate.msg)
-const Charas = db.group('c-', validate.chara)
-const Webhooks = db.group('webhook-', validate.webhook)
-const getTitle = () => (db.find('title') || { title: 'My New Story' }).title;
-const setTitle = (title) => db.put({ _id: 'title', title });
+server.use('/', express.static('web'));
 
 // API
 const api = new express.Router();
@@ -64,25 +80,29 @@ api.use((req, res, next) => {
 })
 api.use(authMiddleware.unless({path: ['/api/auth']}))
 
-const rpListeners = new Set();
-
-function broadcast(obj) {
-  rpListeners.forEach(fn => fn(obj))
-}
-
 /**
  * Generate a new set of credentials for an anonymous user
  */
 api.post('/auth', express.json(), (req, res, next) => {
-  if (!process.env.ALLOW_NEW_USERS || !['true', 'yes', 'y'].includes(process.env.ALLOW_NEW_USERS.toLowerCase())) {
+  const yesValues = ['true', 'yes', 'y'];
+  if (!process.env.ALLOW_NEW_USERS || !yesValues.includes(process.env.ALLOW_NEW_USERS.toLowerCase())) {
     return res.status(403).json({ error: 'New logins not permitted' })
   }
   checkPasscode(req.body.passcode).then(correct => {
     if (!correct) {
       return res.status(401).json({ error: 'Wrong passcode' })
     }
+    
+    const name = req.body.name;
+    const timestamp = new Date().toISOString();
+    
+    // TODO broadcast
+    const [{ _id: userid }] = Users.put({ name });
+    
+    // TODO broadcast
+    SystemMsgs.put({ type: 'login', userid, name, timestamp });
 
-    const credentials = generateToken(req.body.passcode);
+    const credentials = generateToken(userid, req.body.passcode);
 
     res.cookie('usertoken', credentials.token, {
       path: '/api',
@@ -92,86 +112,108 @@ api.post('/auth', express.json(), (req, res, next) => {
       // sameSite: 'strict',
     })
 
-    res.status(200).json(credentials);
+    res.json(credentials);
   }).catch(next);
 });
 
 /**
  * Import RP from JSON
  */
-let importStatus = null;
-
 api.post('/rp/import', (req, res, next) => {
-  const { userid } = req.user;
+  return next(); // TODO remove
+  // forbid import when there are more than a couple messages
+  if (Msgs.count() >= CHAT_SCROLLBACK) {
+    return res.sendStatus(409); // conflict
+  } else {
+    next();
+  }
+}, upload.single('file'), (req, res, next) => {
+  try {
+    fs.copyFileSync(req.file.path, dbFilepath);
+    loadDB();
+
+    // TODO kinda dont like this. maybe we should not even allow streaming if it's not imported yet
+    broadcast({ type: 'reload' });
+
+    res.redirect('/');
+  } finally {
+    fs.unlinkSync(req.file.path);
+  }
+});
+
+/**
+ * Get RP info
+ * Current state, followed by stream of messages
+ * Newline-separated JSONs (expect whitespace that is sent for heartbeat)
+ * Can get the current chat stream, or a particular page
+ * (a page is also a stream, since it can be edited)
+ */
+api.get('/rp', (req, res, next) => {
+  res.set('Content-Type', 'text/plain');
   
-  // forbid import when RP is not empty
-  if (Msgs.count() > 0) {
-    return res.sendStatus(409) // conflict
+  const page = parseInt(req.query.page) || null;
+  
+  const limit = page ? PAGE_LENGTH : CHAT_SCROLLBACK;
+  const pageCount = Math.ceil(Msgs.count() / PAGE_LENGTH);
+  const maxAllowedPage = Math.floor(Msgs.count() / PAGE_LENGTH) + 1;
+  
+  if (page !== null && !(page >= 1 && page <= maxAllowedPage)) {
+    throw new RangeError('invalid page');
   }
   
-  req.on('end', () => {
-    importStatus = { status: 'pending' };
-    res.sendStatus(202);
-  });
-
-  importRp(req, { userid }, {
-    addMsgs(msgs) {
-      console.log(msgs);
-      // return Msgs.put(...msgs);
-    },
-    addCharas(charas) {
-      console.log(charas);
-      return Charas.put(...charas);
-    },
-    setTitle(title) {
-      console.log(title);
-      return setTitle(title);
-    },
-    onComplete(err) {
-      // TODO notify chat ?
-      if (err) {
-        importStatus = { status: 'error', error: err.message };
-      } else  {
-        importStatus = { status: 'success' };              
-      }
-    }
-  });
-});
-
-/**
- * RP Chat Stream
- */
-api.get('/rp/chat', (req, res, next) => {
-  const send = (...objs) => res.write(objs.map(obj => JSON.stringify(obj)).join('\n')+'\n')
+  const send = (obj) => {
+    res.write(JSON.stringify(obj)+'\n');
+    if (res.flush) res.flush();
+  }
   
-  // TODO if import is in progress, send notice and then wait
+  // TODO if import is in progress, send notice and then wait.
+  // TODO ...OR throw an error!
 
-  const msgs = Msgs.list({ reverse: true, limit: 60 }).reverse();
+  
+  const msgs = (page == null)
+    ? Msgs.list({ reverse: true, limit }).reverse()
+    : Msgs.list({ skip: (page-1)*limit, limit });
   const charas = Charas.list();
+  const users = Users.list();
   const title = getTitle();
   
-  send(
-    ({ type: 'title', data: title }),
-    ...charas.map(data => ({ type: 'charas', data })),
-    ...msgs.map(data => ({ type: 'msgs', data })),
-  );
+  send({
+    type: 'init',
+    data: { msgs, charas, title, users, pageCount }
+  });
   
-  rpListeners.add(send);
-  res.on("close", () => rpListeners.delete(send));
-});
-
-/**
- * Get a page from an RP's archive
- */
-api.get('/rp/pages/:pageNum([1-9][0-9]{0,})', (req, res, next) => {
-  const msgCount = Msgs.count();
-  const pageCount = Math.ceil(msgCount / 20);
+  function onUpdate(update) {
+    // only allow new messages to pass through
+    // OR messages that are on-screen that have been edited
+    if (update.type === 'msgs') {
+      if (msgs.find(msg => msg._id === update.data._id)) {
+        // meh... maybe replace it if we centralize this logic later
+      } else if (msgs.length === 0 || update.data._id > msgs[msgs.length-1]._id) {
+        if (msgs.length == limit) {
+          // drop new messages if we're on a specific page that has been filled
+          if (page) return;
+          // otherwise scroll past the least recent msg
+          else msgs.shift();
+        }
+        msgs.push(update.data);
+      } else {
+        return;
+      }
+    }
+    send(update);
+  }
   
-  const skip = (req.params.pageNum - 1) * 20;
-  const limit = 20;
-  const msgs = Msgs.list({ skip, limit });
-
-  res.status(200).json({ msgs, pageCount })
+  rpListeners.add(onUpdate);
+  
+  var heartbeatTimer = setInterval(() => {
+    res.write(' ');
+    if (res.flush) res.flush();
+  }, 15000);
+  
+  res.on("close", () => {
+    clearInterval(heartbeatTimer);
+    rpListeners.delete(onUpdate)
+  });
 });
 
 /**
@@ -183,22 +225,20 @@ api.get('/rp/download.txt', (req, res, next) => {
   const title = getTitle();
   const { includeOOC = false } = req.query;
 
+  const str = generateTextFile({ title, msgs, charas, includeOOC });
+  
   res.attachment(`${title}.txt`).type('.txt');
-  generateTextFile({ title, msgs, charas, includeOOC }, str => res.write(str));
-  res.end();
+  res.send(str);
 });
 
 /**
- * Get and download a .txt file for an entire RP
+ * Export database
  */
-api.get('/rp/export', (req, res, next) => {
-  const msgs = Msgs.iterator();
-  const charas = Charas.list();
+api.post('/rp/export', (req, res, next) => {
   const title = getTitle();
   
-  res.attachment(`${title}.json`).type('.json');
-  exportRp({ title, msgs, charas }, str => res.write(str));
-  res.end();
+  res.attachment(`${title}.rprecord`);
+  res.sendFile(dbFilepath);
 });
 
 /**
@@ -210,14 +250,15 @@ api.put('/rp/msgs', express.json(), (req, res, next) => {
   const obj = { ...req.body, userid, timestamp };
 
   const [doc] = Msgs.put(obj);
+  console.log(doc); 
   broadcast({ type: 'msgs', data: doc })
 
-  res.status(200).json(doc);
+  res.json(doc);
   
   if (!obj._id) { // if adding a new msg, send webhook 
     try {
       const webhooks = Webhooks.list().map(obj => obj.webhook);
-      const chara = obj.charaId && Charas.find(obj.charaId);
+      const chara = obj.who.startsWith('c-') && Charas.find(obj.who);
       const title = getTitle();
       discordWebhooks.send(webhooks, title, obj, chara);
     } catch (err) {
@@ -238,7 +279,7 @@ api.put('/rp/charas', express.json(), (req, res, next) => {
   const [doc] = Charas.put(obj);
   broadcast({ type: 'charas', data: doc })
 
-  res.status(200).json(doc);
+  res.json(doc);
 });
 
 /**
@@ -249,7 +290,7 @@ api.put('/rp/webhook', express.json(), (req, res, next) => {
   const { webhook } = req.body;
   
   if (Webhooks.list().find(doc => doc.webhook === webhook)) {
-    return res.status(400).json({ error: 'That webhook was already added'});
+    throw new Error('That webhook was already added');
   }
   
   Webhooks.put({ webhook, userid });
@@ -281,7 +322,13 @@ api.put('/rp/title', express.json(), (req, res, next) => {
  */ 
 api.get('/rp/msgs/:doc_id([a-z0-9-]+)/history', (req, res, next) => {
   const _id = req.params.doc_id;
-  res.status(200).json(Msgs.history(_id));
+  const msgs = Msgs.history(_id);
+  msgs.forEach(msg => {
+    // add extra username prop for convenience
+    const user = Users.find(msg.userid);
+    if (user) msg.username = user.name;
+  });
+  res.json(msgs);
 });
 
 /**

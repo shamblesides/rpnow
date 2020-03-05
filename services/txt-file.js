@@ -1,37 +1,48 @@
-const wrap = require('word-wrap');
+function wrap(str, indent='', width=72) {
+  width -= indent.length;
+  const regex = RegExp('.{0,' +width+ '}(\\s|$)|.{' +width+ '}|.+$', 'g');
+  const lines = str.trim().match(regex).map(line => line.trimRight());
+  if (lines[lines.length-1] === '') lines.pop();
+  return indent + lines.join('\n'+indent);
+}
 
 function msgText(msg, charasMap) {
-  if (msg.type === 'narrator') {
-    return wrap(msg.content, { width: 72, indent: '', cut: true });
-  } else if (msg.type === 'ooc') {
-    return wrap(`(( OOC: ${msg.content} ))`, { width: 72, indent: '', cut: true });
-  } else if (msg.type === 'chara') {
-    const chara = charasMap.get(msg.charaId);
-    const indentedContent = wrap(msg.content, { width: 70, indent: '  ', cut: true });
+  if (msg.who === 'narrator') {
+    return wrap(msg.content);
+  } else if (msg.who === 'ooc') {
+    return wrap(`(( OOC: ${msg.content} ))`);
+  } else {
+    const chara = charasMap.get(msg.who);
+    if (!chara) throw new Error(`Couldn't find chara: ${msg.who}`);
+    const indentedContent = wrap(msg.content, '  ');
     return `${chara.name.toUpperCase()}:\n${indentedContent}`;
-  } else if (msg.type === 'image') {
-    return `--- IMAGE ---\n${msg.url}\n-------------`;
   }
-
-  throw new Error(`Unexpected message type: ${msg.type}`);
 }
 
 module.exports = ({
-  generateTextFile({ title, msgs, charas, includeOOC }, writeRaw) {
+  generateTextFile({ title, msgs, charas, includeOOC }) {
     const charasMap = charas.reduce((map, c) => map.set(c._id, c), new Map());
     
     // Make sure to only write windows-compatible newlines
-    const write = str => writeRaw(str.replace(/\n/g, '\r\n'));
+    const lines = [];
+    const write = str => lines.push(str.replace(/\n/g, '\r\n'));
 
     // header format
-    write(`${title}\n\n----------\n\n`);
+    write(title);
+    write('-------------');
 
     // Write each message
     for (const msg of msgs) {
-      if (msg.type !== 'ooc' || includeOOC) {
+      if (msg.type === 'image') {
+        write(`--- IMAGE ---\n${msg.url}\n-------------`)
+      } else if (msg.type === 'text') {
+        if (msg.who === 'ooc' && !includeOOC) continue;
+        
         const msgBlock = msgText(msg, charasMap);
-        write(msgBlock+'\n\n');
+        write(msgBlock);
       }
     }
+    
+    return lines.join('\r\n\r\n');
   },
 });
