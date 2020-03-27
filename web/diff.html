@@ -7,17 +7,26 @@
   <style>
     body {
       margin: auto;
+      width: 90%;
       max-width: 400px;
     }
     blockquote, code {
-      margin: 30px;
+      box-sizing: border-box;
+      padding: 30px;
       display: block;
       width: 100%;
     }
+    img {
+      max-height: 40vh;
+      max-width: 100%;
+      object-fit: contain;
+    }
     code {
       font-size: inherit;
+      word-wrap: break-word;
     }
     #show-raw:checked ~ ol blockquote,
+    #show-raw:checked ~ ol img,
     #show-raw:not(:checked) ~ ol code {
       display: none;
     }
@@ -43,12 +52,22 @@
   
   <ol></ol>
   
-  <template id="hist">
+  <template id="hist-text">
     <li>
       <i>Posted by: <span></span></i>
       <br>
       <time></time>
       <blockquote></blockquote>
+      <code></code>
+    </li>
+  </template>
+  
+  <template id="hist-image">
+    <li>
+      <i>Posted by: <span></span></i>
+      <br>
+      <time></time>
+      <img>
       <code></code>
     </li>
   </template>
@@ -89,14 +108,18 @@
     RP.getMessageHistory(id, function(msgs) {
       console.log(msgs);
       msgs.forEach(function (msg) {
-        // TODO do something different for images
-        var el = document.querySelector('template#hist').content.cloneNode(true).querySelector('*');
+        var el = document.querySelector(`template#hist-${msg.type}`).content.cloneNode(true).querySelector('*');
         el.querySelector('i span').innerText = msg.username;
         el.querySelector('time').innerText = new Date(msg.timestamp).toLocaleString();
         el.querySelector('time').innerText += ` (${timeAgoText(msg.timestamp)})`;
         el.querySelector('time').datetime = msg.timestamp;
-        el.querySelector('blockquote').innerHTML = formatRpMessage(msg.content);
-        el.querySelector('code').innerText = msg.content;
+        if (msg.type === 'text') {
+          el.querySelector('blockquote').innerHTML = formatRpMessage(msg.content);
+          el.querySelector('code').innerText = msg.content;
+        } else if (msg.type === 'image') {
+          el.querySelector('img').src = msg.url;
+          el.querySelector('code').innerText = msg.url;
+        }
         document.querySelector('ol').appendChild(el);
       })
     })

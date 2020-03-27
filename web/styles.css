@@ -71,7 +71,7 @@ a.button {
 
 /***** ICON BUTTONS: icons you can click on, used throughout the page *****/
 .icon-button {
-  color: black;
+  color: inherit;
   background: none;
   text-decoration: none;
   border: none;
@@ -86,15 +86,13 @@ a.button {
   justify-content: center;
   align-items: center;
 }
-.icon-button:active {
+.icon-button:active,
+.icon-button:focus {
   background-color: rgba(128,128,128,0.5);
 }
 .icon-button:disabled {
   cursor: auto;
   opacity: 0.26;
-}
-.dark-theme .icon-button {
-  color: white;
 }
 
 /*******
@@ -145,6 +143,11 @@ header button, header a.button {
   line-height: 56px;
   width: 56px;
   padding: 0;
+}
+@media (min-width: 1024px) {
+  body > header {
+    padding-right: 320px;
+  }
 }
 
 #pager {
@@ -204,11 +207,6 @@ main {
   margin: 3vh auto 0;
   padding: 10px;
   text-align: center;
-}
-@media (min-width: 1024px) {
-  body > .notice {
-    margin-right: 320px;
-  }
 }
 
 /***** RP MESSAGES *****/
@@ -493,6 +491,7 @@ main {
   }
   .drawer.drawer-dock-1024 header {
     box-shadow: unset;
+    width: 320px;
   }
   .drawer.drawer-dock-1024.drawer-right ~ main {
     margin-right: 320px;
@@ -646,7 +645,7 @@ main {
   width: 100%;
   box-sizing: border-box;
 }
-#image-dialog output img {
+#image-dialog img {
   display: block;
   width: 100%;
   height: 150px;

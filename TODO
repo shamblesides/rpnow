@@ -1,15 +1,13 @@
 NEXT
 ----
-forbid editing other users' mesages?
-forbid editing "login" msgs
-db import frontend
-destroy all TODOs in the code
-rpnow3 (other project) should import/export webhooks
+no passcode specified?? how does it respond
+destroy all to-do's in the code
 go through console errors
 read through source and clean up the bits
  * console.log
  * commented-out code
  * outdated comments
-demo mode
-TOS https://glitch.com/legal/
- * "In particular, the information under the heading : User Content: “You have the right to let us use your content. We don’t warrant other user’s content.”"
+ * also add new comments for things that need it (lots!)
+check for and notify users of updated rpnow server: GET http://registry.npmjs.org/rpnow
+https://launch-checklist.glitch.me/
+rpnow3 (other project) should import/export webhooks
