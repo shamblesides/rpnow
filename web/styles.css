@@ -174,6 +174,11 @@ header button, header a.button {
 #pager a:not([href]) {
   visibility: hidden;
 }
+@media (min-width: 1024px) {
+  #pager {
+    padding-right: 320px;
+  }
+}
 
 aside.error {
   display: block;
