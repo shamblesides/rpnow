@@ -1,7 +1,6 @@
 {
   "name": "rpnow",
   "version": "4.0.0-beta1",
-  "private": true,
   "scripts": {
     "start": "node server/main.js"
   },
