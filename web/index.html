@@ -7,22 +7,16 @@
   <meta name="apple-mobile-web-app-title" content="My RP">
   <title>Loading...</title>
   <link rel="stylesheet" href="styles.css">
-  <noscript>
-    <!-- TODO decide on no-js strategy -->
-    <style>.js-only { display: none !important; }</style>
-  </noscript>
 </head>
 
 <body>
   <!-- TODO consider making this non-sticky -->
   <header>
-    <button onclick="openPopup('main-menu')" data-page="chat">≡</button>
-    <a href="/" class="button" data-page="archive">❮</a>
+    <button onclick="openPopup('main-menu')">≡</button>
     <h1 id="title"></h1>
   </header>
   
-  <!-- TODO maybe the chat page is just the final "page" of the archive. To unify things. -->
-  <nav id="pager" data-page="archive">
+  <nav id="pager">
     <a class="icon-button" id="prev-page">←</a>
     <form>
       <select name="page" onchange="this.closest('form').submit()"></select>
@@ -31,77 +25,37 @@
   </nav>
   
   <aside class="error"></aside>
+  
+  <noscript>
+    <aside class="error">JavaScript is required for this page to work!</aside>
+  </noscript>
 
   <form id="send-box" class="chara-bg" onsubmit="sendMessage(event)" data-page="chat">
     <input type="hidden" name="type" value="text">
     <button type="button" class="change-chara chara-name" onclick="openPopup('character-menu')"></button>
     <button type="button" class="icon-button" onclick="openPopup('image-dialog')">🖼️</button>
-    <textarea name="content" rows="3" maxlength="10000" required placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist="sendBoxText"></textarea>
+    <textarea name="content" rows="3" maxlength="10000" placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist="sendBoxText"></textarea>
     <button type="submit">➤</button> <!-- TODO ⏳ -->
   </form>
   
-  <form id="image-dialog" class="dialog" oninput="preview.querySelector('img').src=(this.checkValidity() ? url.value : '')" onreset="preview.querySelector('img').src=''" onsubmit="sendImage(event)" data-page="chat">
+  <form id="image-dialog" class="dialog" oninput="this.querySelector('img').src=(this.checkValidity() ? url.value : '')" onreset="console.log(this); this.querySelector('img').src=''" onsubmit="sendImage(event)" data-page="chat">
     <h3>Image URL</h3>
     <input type="hidden" name="type" value="image">
     <input type="hidden" name="_id">
     <input name="url" type="url" ref="urlbox" required placeholder="Enter a URL">
-    <output name="preview" for="url">
-      <img alt="Image preview">
-    </output>
+    <img alt="Image preview">
     <button type="submit" class="text-button">Send ➤</button>
     <button type="reset" class="text-button" onclick="closeMe(event)">Cancel ✘</button>
   </form>
 
   <!-- TODO consider dissolving this into some links at the top of the page -->
-  <section id="main-menu" class="drawer drawer-left" data-page="chat">
+  <section id="main-menu" class="drawer drawer-left">
     <header>
       <h2>Menu</h2>
       <button class="close-button" onclick="closeMe(event)" title="Close">×</button>
     </header>
 
     <div class="drawer-body">
-      <a href="?page=1">
-        📚 Browse archive
-      </a>
-      <a href="format.html" target="_blank">
-        🎀 View formatting info
-      </a>
-      <details>
-        <summary>📃 Download .TXT</summary>
-        <form action="/api/rp/download.txt" target="_blank">
-          <label>
-            <input type="checkbox" name="includeOOC" value="true" checked>
-            Include OOC messages
-          </label>
-          <br>
-          <button type="submit" class="text-button">Download</button>
-        </form>
-      </details>
-      <hr/>
-      <button onclick="openTitleDialog()">
-        📓 Change story title...
-      </button>
-      <button onclick="openWebhookDialog()">
-        🌐 Add Discord webhook...
-      </button>
-      <details>
-        <summary>🚢 Import database</summary>
-        <form action="/api/rp/import" method="POST" enctype="multipart/form-data">
-          <input type="file" name="file" accept=".txt" required>
-          <br>
-          <button type="submit" class="text-button">Upload</button>
-        </form>
-      </details>
-      <details>
-        <summary>📦 Export database</summary>
-        <form action="/api/rp/export" method="POST" target="_blank">
-          <p>
-            This will download all RP data and history in a format that can be imported into a new server.
-          </p>
-          <button type="submit" class="text-button">Download</button>
-        </form>
-      </details>
-      <hr/>
       <label>
         🌒 Night mode
         <input type="checkbox" data-persist="nightMode" onchange="darkMode(event.target.checked)"/>
@@ -114,6 +68,49 @@
         ⏩ Quick send
         <input type="checkbox" id="quicksend" data-persist="quicksend"/>
       </label>
+      <hr/>
+      <a href="format.html" target="_blank">
+        🎀 View formatting info
+      </a>
+      <hr/>
+      <button onclick="openTitleDialog()">
+        📓 Change story title...
+      </button>
+      <button onclick="openWebhookDialog()">
+        🌐 Add Discord webhook...
+      </button>
+      <button onclick="openUsernameDialog()">
+        👤 Change my username...
+      </button>
+      <hr/>
+      <details>
+        <summary>📃 Download .TXT</summary>
+        <form action="/api/rp/download.txt" target="_blank">
+          <label>
+            <input type="checkbox" name="includeOOC" value="true" checked>
+            Include OOC messages
+          </label>
+          <br>
+          <button type="submit" class="text-button">Download</button>
+        </form>
+      </details>
+      <a href="/api/audit" target="_blank">
+        🔍 Audit logins
+      </a>
+      <details>
+        <summary>📦 Export database</summary>
+        <form action="/api/rp/export" method="POST" target="_blank">
+          <p>
+            This will download all RP data and history in a format that can be imported into a new server.
+          </p>
+          <button type="submit" class="text-button">Download</button>
+        </form>
+      </details>
+      <hr/>
+      <form action="/api/logout" method="POST" style="display:none" id="logout-form"></form>
+      <button type="submit" form="logout-form">
+        🚪 Logout
+      </button>
     </div>
   </section>
 
@@ -150,10 +147,6 @@
     </div>
   </section>
   
-  <aside id="archive-info" class="notice" style="display:none" data-page="chat">
-    More messages available in the <a href="?page=1" data-page="chat">Archive</a>
-  </aside>
-
   <main>
     <p id="loading-messages" class="notice">
       <span class="emoji">⏳</span> Loading messages...
@@ -198,18 +191,12 @@
     </div>
   </template>
 
-  <template id="msg-login">
-    <div class="notice">
-      New device credentials from user named "<span class="user-name"></span>"
-    </div>
-  </template>
-
   <template id="chara-button">
     <div class="chara-row">
       <label>
         <input type="radio" form="send-box" name="who" onchange="selectSpeaker(this.value)">
         <span class="chara-name"></span>
-        <button class="icon-button" onclick="toggleEditing(event)">✎</button>
+        <button class="edit-button icon-button" onclick="toggleEditing(event)">✎</button>
       </label>
       <form onsubmit="sendEditedChara(event)">
         <input type="hidden" name="_id">
@@ -224,8 +211,6 @@
       </form>
     </div>
   </template>
-
-  <!-- TODO Import (dialog?) -->
 
   <script>
     function setError(error) {
@@ -249,7 +234,13 @@
     }
     function closeElement(el) {
       if (el && el.classList.contains('open')) {
-        if (el.tagName === 'FORM') el.reset();
+        if (el.tagName === 'FORM') {
+          el.reset();
+          // hidden elements, like _id, are not reset automatically
+          if (el.elements['_id']) {
+            el.elements['_id'].value = '';
+          }
+        }
         el.classList.remove('open');
       }
     }
@@ -261,7 +252,7 @@
       var src = message.querySelector('img').src;
       document.getElementById('image-dialog').elements['_id'].value = message.id;
       document.getElementById('image-dialog').elements['url'].value = src;
-      document.getElementById('image-dialog').elements['preview'].children[0].src = src;
+      document.getElementById('image-dialog').querySelector('img').src = src;
       openPopup('image-dialog');
     }
     function darkMode(isDark) {
@@ -271,7 +262,7 @@
       if (event.key !== 'Enter' || event.shiftKey) return;
       if (event.ctrlKey || (applySetting && document.querySelector('#quicksend').checked)) {
         event.preventDefault();
-        event.target.closest('form').dispatchEvent(new Event('submit'));
+        event.target.closest('form').querySelector('[type=submit]').click();
       }
     }
     function selectSpeaker(speaker) {
@@ -291,6 +282,12 @@
         RP.addWebhook(webhook, function() {
           alert('Webhook added successfully')
         })
+      }
+    }
+    function openUsernameDialog() {
+      var name = prompt('What will you, the writer, be known by?');
+      if (name != null) {
+        RP.changeMyUsername(name);
       }
     }
     function sendMessage(event) {
@@ -379,7 +376,7 @@
     var query = {};
     location.search.substr(1).split("&").forEach(function(x) { x=x.split('='); query[x[0]] = decodeURIComponent(x[1]) });
     
-    var pagenum = parseInt(query['page']) || null;
+    var pagenum = parseInt(query['page']) || 0;
     if (pagenum) {
       document.body.dataset.pagenum = pagenum;
       
@@ -496,6 +493,9 @@
       var el = document.querySelector('template#chara-button').content.cloneNode(true).querySelector('*');
       el.id = data._id;
       el.dataset.rev = data._rev;
+      if (data.userid !== RP.myUserID) {
+        el.querySelector('.edit-button').style.display = 'none';
+      }
       el.classList.add(data._id);
       el.querySelector('input[type=radio]').value = data._id;
       el.querySelector('form [name=_id]').value = data._id;
@@ -509,6 +509,9 @@
       el.id = data._id;
       el.dataset.rev = data._rev;
       el.dataset.userid = data.userid;
+      if (data.userid !== RP.myUserID) {
+        el.querySelector('.edit-button').style.display = 'none';
+      } 
       if (data.type === 'text') {
         el.dataset.who = data.who;
         el.classList.add(data.who);
@@ -519,8 +522,6 @@
         el.querySelector('blockquote').innerHTML = formatRpMessage(data.content);
       } else if (data.type === 'image') {
         el.querySelector('img').src = data.url;
-      } else if (data.type === 'login') {
-        // nothing special I guess
       }
       return el;
     }
@@ -561,37 +562,45 @@
           var el = buildMessageElement(msg);
           addTo(el, main);
         }
-        if (data.msgs.length === 10) {
-          document.querySelector('#archive-info').style.display = '';
-        }
         
         if (!pagenum) {
-          window.scrollBy(0, 999999);
-        } else {
-          for (var i = 1; i <= data.pageCount; ++i) {
-            var optionEl = document.createElement('option');
-            optionEl.value = i;
-            optionEl.innerText = `Page ${i}`;
-            document.querySelector('#pager select').appendChild(optionEl);
-          }
-          document.querySelector('#pager [name=page]').value = pagenum;
-          if (pagenum != 1) {
-            document.querySelector('#pager #prev-page').href = `?page=${pagenum-1}`;
-          }
-          if (pagenum < data.pageCount) {
-            document.querySelector('#pager #next-page').href = `?page=${pagenum+1}`;
-          }
+          // window.scrollBy(0, 999999);
         }
-        if (document.getElementById('loading-messages')) {
-          document.getElementById('loading-messages').remove();
+        for (var i = 1; i <= data.pageCount; ++i) {
+          var optionEl = document.createElement('option');
+          optionEl.value = i;
+          optionEl.innerText = `Page ${i}`;
+          document.querySelector('#pager select').appendChild(optionEl);
         }
+        var optionEl = document.createElement('option');
+        optionEl.value = 0;
+        optionEl.innerText = 'Chat';
+        document.querySelector('#pager select').appendChild(optionEl);
+
+        document.querySelector('#pager [name=page]').value = pagenum;
+        
+        if (pagenum === 0) {
+          document.querySelector('#pager #prev-page').href = `?page=${data.pageCount}`;
+        } else if (pagenum != 1) {
+          document.querySelector('#pager #prev-page').href = `?page=${pagenum-1}`;
+        }
+        if (pagenum === data.pageCount) {
+          document.querySelector('#pager #next-page').href = `?page=${0}`;
+        } else if (pagenum != 0) {
+          document.querySelector('#pager #next-page').href = `?page=${pagenum+1}`;
+        }
+        var loadingMsg = document.getElementById('loading-messages');
+        if (loadingMsg) {
+          loadingMsg.remove();
+        }
+        console.log(RP.myUserID)
       },
       title(title) {
         document.title = title;
         document.getElementById('title').innerText = title;
       },
       user(data) {
-        var style = userStyles(user);
+        var style = userStyles(data);
         addTo(style, document.head);
       },
       chara(data) {
@@ -622,12 +631,9 @@
             while (main.childNodes.length > 10) {
               main.firstChild.remove();
             }
-            if (main.childNodes.length === 10) {
-              document.querySelector('#archive-info').style.display = '';
-            }
           }
           // if we were previously at the bottom of the page, scroll back down there
-          if (wasAtBottom && pagenum == null) {
+          if (wasAtBottom && !pagenum) {
             window.scrollBy(0, 999999);
           }
 
@@ -656,7 +662,7 @@
   <script src="/libraries/spectrum.js"></script>
 
   <!-- alert audio -->
-  <script src="/libraries/howler.min.js"></script>
+  <script src="/libraries/howler.core.min.js"></script>
   <script>
     var alertNoise = new Howl({
       src: ['https://cdn.glitch.com/0e12472f-d496-485a-a042-740bef658eb2%2Ftypewriter.mp3?v=1575714187192']

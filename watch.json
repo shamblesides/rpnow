@@ -1,14 +1,14 @@
 {
   "install": {
     "include": [
-      "^package\\.json$",
-      "^\\.env$"
+      "^package\\.json$"
     ]
   },
   "restart": {
     "include": [
       "\\.json$",
-      "\\.js$"
+      "\\.js$",
+      "^\\.env$"
     ],
     "exclude": [
       "^web/"

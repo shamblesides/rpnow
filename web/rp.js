@@ -78,24 +78,22 @@ window.RP = (function() {
       xhr.onloadend = xhrPromiseResult.bind(xhr, resolve, reject);
       xhr.open('GET', url);
       xhr.send();
+    }).then(function() {
+      return xhr;
     })
   }
 
-  function auth(name) {
+  function auth() {
     var passcode = prompt('Please enter the passcode for this room:');
     if (passcode == null) {
       return Promise.reject(new Error('No passcode provided'));
     }
-    if (!name) {
-      name = prompt('And what is your name? (as in you, the writer?)')
-      if (!name) return Promise.reject(new Error('No name given'))
-    }
     
-    return requestWithJSON('POST', '/api/auth', { passcode: passcode, name: name })
+    return requestWithJSON('POST', '/api/auth', { passcode: passcode })
     .catch(function (err) {
       var retry = confirm(`Failed to authenticate. Retry? (${err})`);
       if (retry) {
-        return auth(name);
+        return auth();
       } else {
         throw err;
       }
@@ -113,6 +111,7 @@ window.RP = (function() {
     var onerror = callbacks.error;
     
     jsonStream(`/api/rp?page=${page}`, function(update) {
+      console.log(update);
       if (update.type === 'init') {
         oninit(update.data);
       } else if (update.type === 'title') {
@@ -123,14 +122,17 @@ window.RP = (function() {
         onchara(update.data);
       } else if (update.type === 'users') {
         onuser(update.data);
-      } else if (update.type === 'reload') {
-        location.reload();
       }
     })
-    .then(function () {
-      // This stream isn't supposed to complete. If it does, that means that
-      // the request has terminated for some reason. So, throw an error.
-      throw new Error('Lost connection! Trying to reconnect...');
+    .then(function (xhr) {
+      if (xhr.status === 204) { // No content
+        history.replaceState(null, '', 'setup.html');
+        location.reload();
+      } else {
+        // This stream isn't supposed to complete. If it does, that means that
+        // the request has terminated for some reason. So, throw an error.
+        throw new Error('Lost connection! Trying to reconnect...');
+      }
     })
     .catch(function (err) {
       if (err.status === 401) { // Not logged in
@@ -174,11 +176,23 @@ window.RP = (function() {
     .then(callback)
   }
 
+  exports.changeMyUsername = function changeTitle(name, callback) {
+    return requestWithJSON('PUT', '/api/rp/username', { name: name })
+    .catch(alertError)
+    .then(callback)
+  }
+
   exports.addWebhook = function addWebhook(webhook, callback) {
     return requestWithJSON('PUT', '/api/rp/webhook', { webhook: webhook })
     .catch(alertError)
     .then(callback)
   }
+  
+  Object.defineProperty(exports, 'myUserID', { get: function() {
+    var cookieName = 'userid';
+    var cookieMatch = document.cookie.match('(^|[^;]+)\\s*' + cookieName + '\\s*=\\s*([^;]+)');
+    return cookieMatch ? cookieMatch.pop() : '';
+  } });
   
   return exports;
   
