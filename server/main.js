@@ -38,7 +38,7 @@ server.use((req, res, next) => {
 });
 
 // Serve frontend HTML, etc
-server.use(express.static('web'));
+server.use(express.static(path.resolve(__dirname, 'web')));
 
 // API
 const api = new express.Router();
@@ -114,7 +114,7 @@ function getContext(req) {
 
 function getDBFilepath(req) {
   if (IS_DEMO_MODE) {
-    return path.resolve(`/tmp/rpdemo-${req.user.userid}`)
+    return path.resolve(os.tmpdir(), `rpdemo-${req.user.userid}`)
   } else {
     return path.resolve('.data/db');
   }
