@@ -133,7 +133,9 @@ function writeAuditLog(req, text) {
     const clipped = Math.floor(lines.length * .25);
     fs.writeFileSync(filepath, [`--- ${clipped} lines clipped ---`, ...lines.slice(clipped)].join('\n'));
   }
-  fs.appendFileSync(filepath, text + '\n');
+  
+  const timestamp = new Date().toISOString();
+  fs.appendFileSync(filepath, `${timestamp} - ${text}\n`);
 }
 
 /**
@@ -188,14 +190,11 @@ if (!IS_DEMO_MODE) {
     }
     checkPasscode(req.body.passcode).then(correct => {
       if (!correct) {
-        return res.status(401).json({ error: 'Wrong passcode' });
         writeAuditLog(req, 'Invalid login attempt')
+        return res.status(401).json({ error: 'Wrong passcode' });
       }
 
-      const timestamp = new Date().toISOString();
-
-      const logline = `${timestamp} - New login with room passcode: ${req.body.passcode}`;
-      writeAuditLog(req, logline);
+      writeAuditLog(req, `New login with room passcode: ${req.body.passcode}`);
 
       const credentials = generateToken(req.body.passcode);
 
