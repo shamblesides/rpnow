@@ -7,10 +7,6 @@
   <meta name="apple-mobile-web-app-title" content="My RP">
   <title>Loading...</title>
   <link rel="stylesheet" href="styles.css">
-  <noscript>
-    <!-- TODO decide on no-js strategy -->
-    <style>.js-only { display: none !important; }</style>
-  </noscript>
 </head>
 
 <body>
@@ -29,12 +25,16 @@
   </nav>
   
   <aside class="error"></aside>
+  
+  <noscript>
+    <aside class="error">JavaScript is required for this page to work!</aside>
+  </noscript>
 
   <form id="send-box" class="chara-bg" onsubmit="sendMessage(event)" data-page="chat">
     <input type="hidden" name="type" value="text">
     <button type="button" class="change-chara chara-name" onclick="openPopup('character-menu')"></button>
     <button type="button" class="icon-button" onclick="openPopup('image-dialog')">🖼️</button>
-    <textarea name="content" rows="3" maxlength="10000" required placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist="sendBoxText"></textarea>
+    <textarea name="content" rows="3" maxlength="10000" placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist="sendBoxText"></textarea>
     <button type="submit">➤</button> <!-- TODO ⏳ -->
   </form>
   
@@ -79,6 +79,10 @@
       <button onclick="openWebhookDialog()">
         🌐 Add Discord webhook...
       </button>
+      <button onclick="openUsernameDialog()">
+        👤 Change my username...
+      </button>
+      <hr/>
       <details>
         <summary>📃 Download .TXT</summary>
         <form action="/api/rp/download.txt" target="_blank">
@@ -192,7 +196,7 @@
       <label>
         <input type="radio" form="send-box" name="who" onchange="selectSpeaker(this.value)">
         <span class="chara-name"></span>
-        <button class="icon-button" onclick="toggleEditing(event)">✎</button>
+        <button class="edit-button icon-button" onclick="toggleEditing(event)">✎</button>
       </label>
       <form onsubmit="sendEditedChara(event)">
         <input type="hidden" name="_id">
@@ -278,6 +282,12 @@
         RP.addWebhook(webhook, function() {
           alert('Webhook added successfully')
         })
+      }
+    }
+    function openUsernameDialog() {
+      var name = prompt('What will you, the writer, be known by?');
+      if (name != null) {
+        RP.changeMyUsername(name);
       }
     }
     function sendMessage(event) {
@@ -483,6 +493,9 @@
       var el = document.querySelector('template#chara-button').content.cloneNode(true).querySelector('*');
       el.id = data._id;
       el.dataset.rev = data._rev;
+      if (data.userid !== RP.myUserID) {
+        el.querySelector('.edit-button').style.display = 'none';
+      }
       el.classList.add(data._id);
       el.querySelector('input[type=radio]').value = data._id;
       el.querySelector('form [name=_id]').value = data._id;
@@ -587,7 +600,7 @@
         document.getElementById('title').innerText = title;
       },
       user(data) {
-        var style = userStyles(user);
+        var style = userStyles(data);
         addTo(style, document.head);
       },
       chara(data) {

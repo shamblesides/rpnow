@@ -18,7 +18,6 @@ module.exports = function idgen({
   const timestampSize = Math.ceil(Math.log(tSpan/maxTimeWindow) / Math.log(base));
   const tsStr = (t) => ((t - t0) / tSpan).toString(base).slice(2,2+timestampSize);
 
-  // TODO could use db record count for counter
   let counter = 0;
   let lastTimeString;
   return function makeId() {

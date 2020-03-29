@@ -63,13 +63,14 @@ function context(dbFilepath) {
   // Database
   const db = Store(dbFilepath);
   
-  // TODO attach broadcast() directly to db table defs
-  // TODO db.group('m-').constrain????(validate.userMsg????)
-  const Msgs = db.group('m-', validate.msg)
-  const Charas = db.group('c-', validate.chara)
-  const Users = db.group('u-', validate.user);
-  const addUser = (user) => db.put(user); // TODO remove
-  const Webhooks = db.group('webhook-', validate.webhook)
+  const Msgs =     db.prefix('m-').constrain(validate.msg).autoid()
+  const Charas =   db.prefix('c-').constrain(validate.chara).autoid()
+  const Users =    db.prefix('u-').constrain(validate.user);
+  const Webhooks = db.prefix('webhook-').constrain(validate.webhook).autoid()
+  
+  Msgs.updates.on('update', data => broadcast({ type: 'msgs', data }));
+  Charas.updates.on('update', data => broadcast({ type: 'charas', data }));
+  Users.updates.on('update', data => broadcast({ type: 'users', data }));
 
   const getTitle = () => db.find('title').title;
   function setTitle(title) {
@@ -77,15 +78,14 @@ function context(dbFilepath) {
     if (title.length > 30) throw new Error('title too long');
     if (!title) throw new Error('missing title');
     db.put({ _id: 'title', title });
+    broadcast({ type: 'title', data: title });
   }
   
   return {
-    broadcast,
     subscribe,
     Msgs,
     Charas,
     Users,
-    addUser,
     Webhooks,
     getTitle,
     setTitle,
@@ -194,7 +194,6 @@ if (!IS_DEMO_MODE) {
 
       const timestamp = new Date().toISOString();
 
-      // TODO broadcast?
       const logline = `${timestamp} - New login with room passcode: ${req.body.passcode}`;
       writeAuditLog(req, logline);
 
@@ -263,12 +262,11 @@ if (!IS_DEMO_MODE) {
     const dbFilepath = getDBFilepath(req);
     if (!fs.existsSync(dbFilepath)) {
       fs.writeFileSync(dbFilepath, '', { flag: 'wx' });
-      const { setTitle, Msgs, Charas, addUser } = getContext(req);
+      const { setTitle, Msgs, Charas, Users } = getContext(req);
       setTitle('My Demo RP');
       const meta = { userid: 'u-0000000', timestamp: new Date().toJSON() };
       const [{ _id: cid }] = Charas.put({ name: 'The RP Witch', color: '#8363cd', ...meta })
-      // TODO put in `Users`
-      addUser({
+      Users.put({
         _id: 'u-0000000',
         name: 'DemoBot',
       }),
@@ -315,9 +313,7 @@ api.post('/logout', (req, res, next) => {
  * (a page is also a stream, since it can be edited)
  */
 rp.get('/', (req, res, next) => {
-  console.log(req.user.exp);
-  console.log(Date.now()/1000)
-  const { Msgs, Charas, Users, addUser, getTitle, subscribe } = getContext(req);
+  const { Msgs, Charas, Users, getTitle, subscribe } = getContext(req);
   
   const page = parseInt(req.query.page) || null;
   
@@ -329,9 +325,7 @@ rp.get('/', (req, res, next) => {
   }
 
   if (!Users.has(req.user.userid)) {
-    // TODO Users.put
-    // TODO broadcast
-    addUser({ _id: req.user.userid, name: `User ${Math.random().toString().slice(-3)}` });
+    Users.put({ _id: req.user.userid, name: `User ${Math.random().toString().slice(-3)}` });
   }
   
   res.type('text/plain');
@@ -423,7 +417,7 @@ rp.post('/export', (req, res, next) => {
  * Add/update msg
  */
 rp.put('/msgs', express.json(), (req, res, next) => {
-  const { Msgs, broadcast, Webhooks, Charas, getTitle } = getContext(req);
+  const { Msgs, Webhooks, Charas, getTitle } = getContext(req);
   
   const { userid } = req.user;
   const timestamp = new Date().toISOString();
@@ -434,8 +428,6 @@ rp.put('/msgs', express.json(), (req, res, next) => {
   }
 
   const [doc] = Msgs.put(obj);
-  console.log(doc); 
-  broadcast({ type: 'msgs', data: doc })
 
   res.json(doc);
   
@@ -456,7 +448,7 @@ rp.put('/msgs', express.json(), (req, res, next) => {
  * Add/update chara
  */
 rp.put('/charas', express.json(), (req, res, next) => {
-  const { Charas, broadcast } = getContext(req);
+  const { Charas } = getContext(req);
 
   const { userid } = req.user;
   const timestamp = new Date().toISOString();
@@ -467,7 +459,6 @@ rp.put('/charas', express.json(), (req, res, next) => {
   }
 
   const [doc] = Charas.put(obj);
-  broadcast({ type: 'charas', data: doc })
 
   res.json(doc);
 });
@@ -493,12 +484,23 @@ rp.put('/webhook', express.json(), (req, res, next) => {
  * Update RP title
  */
 rp.put('/title', express.json(), (req, res, next) => {
-  const { setTitle, broadcast } = getContext(req);
+  const { setTitle } = getContext(req);
   
   setTitle(req.body.title);
-  broadcast({ type: 'title', data: req.body.title })
   res.sendStatus(204);
 });
+
+/**
+ * Change my username
+ */
+rp.put('/username', express.json(), (req, res, next) => {
+  const { Users } = getContext(req);
+  const userid = req.user.userid;
+  const name = req.body.name;
+  
+  Users.put({ _id: userid, name });
+  res.sendStatus(204);
+})
 
 /**
  * Get a message's edit history

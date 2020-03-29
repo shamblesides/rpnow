@@ -21,6 +21,7 @@ License: MIT
 Author: Nigel Nelson, 2020
 ============================================================ */
 
+const EventEmitter = require('events');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -245,9 +246,35 @@ function DB(dbfile) {
   // ==================================
   // 3. RETURN PUBLIC API
   // ==================================
-  const DB = ({ prefix='', validator=()=>{} }) => ({
-    group: prefix ? null : function (prefix, v=validator) {
-      return DB({ prefix, validator: v });
+  const DB = ({
+    prefix='',
+    validators=[],
+    autoid=false,
+    eventEmitters=[new EventEmitter()],
+  }) => ({
+    prefix(p) {
+      return DB({
+        prefix: prefix+p,
+        validators,
+        autoid,
+        eventEmitters: eventEmitters.concat([new EventEmitter()]),
+      });
+    },
+    constrain(validator) {
+      return DB({
+        prefix,
+        validators: validators.concat([validator]),
+        autoid,
+        eventEmitters: eventEmitters.concat([new EventEmitter()]),
+      });
+    },
+    autoid() {
+      return DB({
+        prefix,
+        validators,
+        autoid: true,
+        eventEmitters: eventEmitters.concat([new EventEmitter()]),
+      });
     },
     put(...objs) {
       const modified = objs.map(inputObj => {
@@ -255,7 +282,9 @@ function DB(dbfile) {
 
         let { _rev, ...obj } = inputObj;
 
-        validator(obj); // should throw error if invalid
+        for (const validator of validators) {
+          validator(obj); // should throw error if invalid
+        }
         
         // Error checking with the _id
         if ('_id' in obj) {
@@ -264,12 +293,14 @@ function DB(dbfile) {
           if (prefix) {
             // if it's a group, check that _id has the prefix
             if (!obj._id.startsWith(prefix)) throw new Error(`_id should begin with ${prefix}`);
-            // can't arbitrarily insert new _id's into a prefixed list. they should be generated.
+          }
+          if (autoid) {
+            // can't arbitrarily insert new _id's if the server is supposed to generate them.
             if (revCount(obj._id) == 0) throw new Error('list item with this _id does not exist');
           }
         } else {
-          // must provide id if there's no prefix
-          if (!prefix) throw new Error('missing _id');
+          // must provide id if they aren't generated automatically
+          if (!autoid) throw new Error('missing _id');
         }
 
         // Error checking with the _rev
@@ -292,9 +323,18 @@ function DB(dbfile) {
       const jsons = modified.map(obj => JSON.stringify(obj));
       jsons.forEach((json, i) => {
         const _rev = register(json, objs[i]._id);
-        modified[i]._rev = _rev;
+        
+        // makes it so _rev is the second prop on the object
+        const { _id, ...obj } = modified[i];
+        modified[i] = { _id, _rev, ...obj };
       })
       fs.appendFileSync(dbfile, jsons.join('\t')+'\n');
+      for (const eventEmitter of eventEmitters) {
+        for (const obj of modified) {
+          eventEmitter.emit('update', obj);
+        }
+      }
+
       return modified;
     },
     has(_id) {
@@ -336,6 +376,9 @@ function DB(dbfile) {
 
       const [i0, i1] = prefixRange(keys, prefix);
       return i1 - i0;
+    },
+    get updates() {
+      return eventEmitters[eventEmitters.length-1];
     },
   });
 

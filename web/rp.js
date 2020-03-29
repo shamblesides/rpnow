@@ -176,6 +176,12 @@ window.RP = (function() {
     .then(callback)
   }
 
+  exports.changeMyUsername = function changeTitle(name, callback) {
+    return requestWithJSON('PUT', '/api/rp/username', { name: name })
+    .catch(alertError)
+    .then(callback)
+  }
+
   exports.addWebhook = function addWebhook(webhook, callback) {
     return requestWithJSON('PUT', '/api/rp/webhook', { webhook: webhook })
     .catch(alertError)

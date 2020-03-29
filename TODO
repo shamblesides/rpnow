@@ -1,6 +1,7 @@
 NEXT
 ----
 no passcode specified?? how does it respond
+check for and notify users of updated rpnow server: GET http://registry.npmjs.org/rpnow
 destroy all to-do's in the code
 go through console errors
 read through source and clean up the bits
@@ -8,6 +9,5 @@ read through source and clean up the bits
  * commented-out code
  * outdated comments
  * also add new comments for things that need it (lots!)
-check for and notify users of updated rpnow server: GET http://registry.npmjs.org/rpnow
 https://launch-checklist.glitch.me/
 rpnow3 (other project) should import/export webhooks
