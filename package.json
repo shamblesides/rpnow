@@ -12,9 +12,10 @@
     "url": "https://github.com/rpnow/rpnow/issues"
   },
   "homepage": "https://github.com/rpnow/rpnow#readme",
-  "main": "server/main.js",
+  "main": "./server/main.js",
+  "bin": "./server/main.js",
   "scripts": {
-    "start": "node server/main.js"
+    "start": "./server/main.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.5",
