@@ -15,7 +15,7 @@ const CHAT_SCROLLBACK = 10;
 const PAGE_LENGTH = 20;
 
 const PASSCODE = process.env.PASSCODE;
-const IS_DEMO_MODE = (PASSCODE === 'demo31032016');
+const IS_DEMO_MODE = (PASSCODE === 'rpnow demo');
 
 // Express is our HTTP server
 const server = express();
@@ -179,8 +179,8 @@ if (!IS_DEMO_MODE) {
    * Generate a new set of credentials for an anonymous user
    */
   api.post('/auth', express.json(), (req, res, next) => {
-    const isYes = (value) => ['true', 'yes', 'y'].includes(value.toLowerCase());
-    if (!process.env.ALLOW_NEW_USERS || !isYes(process.env.ALLOW_NEW_USERS)) {
+    const isYes = (value) => value && ['true', 'yes', 'y'].includes(value.toLowerCase());
+    if (isYes(process.env.LOCKDOWN)) {
       return res.status(403).json({ error: 'New logins not permitted' })
     }
     if (typeof req.body.passcode !== 'string' || req.body.passcode.length > 200) {
@@ -281,11 +281,11 @@ if (!IS_DEMO_MODE) {
         content: 'Welcome to the Demo RP! Feel free to test out this app here!',
         ...meta
       })
-      const temporaryPassword = 
+      const passphrase = temporaryPassphrase();
       Msgs.put({
         type: 'text',
         who: cid,
-        content: `When you are ready do this: https://glitch.com/edit/#!/remix/rpnow?ALLOW_NEW_USERS=yes&PASSCODE=%22${temporaryPassphrase().replace(/ /g, '%20')}%22`,
+        content: `When you are ready do this: https://glitch.com/edit/#!/remix/rpnow?LOCKDOWN=%22no%22&PASSCODE=%22${passphrase.replace(/ /g, '%20')}%22\n\nThe passcode will be: "${passphrase}" (But you can change it later.)`,
         ...meta
       })
     }
