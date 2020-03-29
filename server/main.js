@@ -204,13 +204,11 @@ if (!IS_DEMO_MODE) {
       res.cookie('usertoken', credentials.token, {
         path: '/api',
         httpOnly: true,
-        secure: true,
         // sameSite: 'strict',
       })
       res.cookie('userid', credentials.userid, {
         path: '/',
         httpOnly: false,
-        secure: true,
         // sameSite: 'strict',
       })
 
@@ -244,13 +242,11 @@ if (!IS_DEMO_MODE) {
       res.cookie('usertoken', credentials.token, {
         path: '/api',
         httpOnly: true,
-        secure: true,
         // sameSite: 'strict',
       });
       res.cookie('userid', credentials.userid, {
         path: '/',
         httpOnly: false,
-        secure: true,
         // sameSite: 'strict',
       })
       req.user = { userid: credentials.userid, demo: true };
