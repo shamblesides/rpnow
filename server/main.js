@@ -31,7 +31,7 @@ server.use((req, res, next) => {
 // Redirect all HTTP routes to HTTPS
 server.use((req, res, next) => {
   const forwardedProto = req.get('X-Forwarded-Proto');
-  if (forwardedProto && forwardedProto.indexOf("https") >= 0){
+  if (forwardedProto && forwardedProto.indexOf("https") === -1){
     res.redirect('https://' + req.hostname + req.url);
   } else {
     next()
