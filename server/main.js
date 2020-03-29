@@ -40,6 +40,13 @@ server.use((req, res, next) => {
 
 // Serve frontend HTML, etc
 server.use(express.static(path.resolve(__dirname, '../web')));
+server.get('/custom.css', (req, res, next) => {
+  if (fs.existsSync('custom.css')) {
+    res.sendFile(path.resolve('custom.css'));
+  } else {
+    res.sendStatus(204);
+  }
+});
 
 // API
 const api = new express.Router();
