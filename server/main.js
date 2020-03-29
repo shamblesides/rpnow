@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+console.info(`RPNow Server ${require('../package.json').version}`);
+
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
