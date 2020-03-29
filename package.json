@@ -2,7 +2,7 @@
   "name": "rpnow",
   "description": "An RPNow server lets you do roleplaying and collaborative writing with a small group of friends!",
   "license": "MIT",
-  "version": "4.0.0-beta1",
+  "version": "4.0.1-0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rpnow/rpnow.git"
