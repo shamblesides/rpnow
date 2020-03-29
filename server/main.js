@@ -39,7 +39,7 @@ server.use((req, res, next) => {
 });
 
 // Serve frontend HTML, etc
-server.use(express.static(path.resolve(__dirname, 'web')));
+server.use(express.static(path.resolve(__dirname, '../web')));
 
 // API
 const api = new express.Router();
