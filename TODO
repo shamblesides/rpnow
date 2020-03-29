@@ -1,7 +1,7 @@
 NEXT
 ----
-no passcode specified?? how does it respond
 check for and notify users of updated rpnow server: GET http://registry.npmjs.org/rpnow
+server-side beacon
 destroy all to-do's in the code
 go through console errors
 read through source and clean up the bits

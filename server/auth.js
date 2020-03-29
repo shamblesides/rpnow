@@ -20,7 +20,12 @@ const jwtSecret = (fs.existsSync(filename))
   ? fs.readFileSync(filename)
   : generateSecret();
 
-module.exports = function (realpassString) {
+function passcodeChecker(realpassString) {
+  if (!realpassString) {
+    // return () => Promise.resolve(true);
+    throw new Error('Room passcode not provided');
+  }
+  
   const salt = Buffer.alloc(16);
   crypto.randomFillSync(salt);
   const iterations = 100000;
@@ -28,16 +33,18 @@ module.exports = function (realpassString) {
   const hash = 'sha512';
   
   const key = crypto.pbkdf2Sync(realpassString, salt, iterations, keylen, hash);
+  
+  return (p) => new Promise((resolve, reject) => {
+    crypto.pbkdf2(p, salt, iterations, keylen, hash, (err, attempt) => {
+      if (err) reject(err);
+      else resolve(crypto.timingSafeEqual(attempt, key));
+    });
+  });
+}
 
+module.exports = function (realpassString) {
   return {
-    checkPasscode(p) {
-      return new Promise((resolve, reject) => {
-        crypto.pbkdf2(p, salt, iterations, keylen, hash, (err, attempt) => {
-          if (err) reject(err);
-          else resolve(crypto.timingSafeEqual(attempt, key));
-        });
-      })
-    },
+    checkPasscode: passcodeChecker(realpassString),
     
     generateToken(roompass) {
       const userid = `u-${nextID()}`;
