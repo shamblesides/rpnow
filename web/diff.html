@@ -106,7 +106,6 @@
     }
     
     RP.getMessageHistory(id, function(msgs) {
-      console.log(msgs);
       msgs.forEach(function (msg) {
         var el = document.querySelector(`template#hist-${msg.type}`).content.cloneNode(true).querySelector('*');
         el.querySelector('i span').innerText = msg.username;

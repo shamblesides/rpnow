@@ -22,7 +22,6 @@ const jwtSecret = (fs.existsSync(filename))
 
 function passcodeChecker(realpassString) {
   if (!realpassString) {
-    // return () => Promise.resolve(true);
     throw new Error('Room passcode not provided');
   }
   

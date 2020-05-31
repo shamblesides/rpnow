@@ -1,25 +1,26 @@
 #!/usr/bin/env node
 
-console.info(`RPNow Server ${require('../package.json').version}`);
-
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const upload = require('multer')({ dest: os.tmpdir() });
+const version = require('../package.json').version
 const { generateTextFile } = require('./txt-file');
 const Store = require('./storage');
 const validate = require('./validate-user-documents');
 const Auth = require('./auth');
 const discordWebhooks = require('./discord-webhooks');
-const temporaryPassphrase = require('./temporary-passphrase');
+const fetch = require('node-fetch');
 
 const CHAT_SCROLLBACK = 10;
 const PAGE_LENGTH = 20;
 
 const PASSCODE = process.env.PASSCODE;
 const IS_DEMO_MODE = (PASSCODE === 'rpnow demo');
+
+console.info(`RPNow Server ${version}`);
 
 // Express is our HTTP server
 const server = express();
@@ -42,13 +43,17 @@ server.use((req, res, next) => {
 
 // Serve frontend HTML, etc
 server.use(express.static(path.resolve(__dirname, '../web')));
-server.get('/custom.css', (req, res, next) => {
-  if (fs.existsSync('custom.css')) {
-    res.sendFile(path.resolve('custom.css'));
-  } else {
-    res.sendStatus(204);
-  }
-});
+
+// Load custom css/js in the current directory
+for (const file of ['custom.css', 'custom.js']) {
+  server.get('/'+file, (req, res, next) => {
+    if (fs.existsSync(file)) {
+      res.sendFile(path.resolve(file));
+    } else {
+      res.sendStatus(204);
+    }
+  });
+}
 
 // API
 const api = new express.Router();
@@ -56,6 +61,26 @@ server.use('/api', api);
 api.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache');
   next();
+})
+
+api.get('/version', (req, res, next) => {
+  fetch('https://registry.npmjs.org/rpnow')
+  .then(res => res.json())
+  .then(data => data['dist-tags'].latest)
+  .then(latest => {
+    res.json({
+      current: version,
+      latest,
+    })
+  })
+  .catch(err => {
+    console.error(err);
+    res.json({
+      current: version,
+      latest: version,
+    })
+  })
+  .catch(next);
 })
 
 // A context object will store some DB connections etc
@@ -146,7 +171,7 @@ function writeAuditLog(req, text) {
     fs.writeFileSync(filepath, [`--- ${clipped} lines clipped ---`, ...lines.slice(clipped)].join('\n'));
   }
   
-  const timestamp = new Date().toISOString();
+  const timestamp = new Date().toUTCString();
   fs.appendFileSync(filepath, `${timestamp} - ${text}\n`);
 }
 
@@ -213,12 +238,10 @@ if (!IS_DEMO_MODE) {
       res.cookie('usertoken', credentials.token, {
         path: '/api',
         httpOnly: true,
-        // sameSite: 'strict',
       })
       res.cookie('userid', credentials.userid, {
         path: '/',
         httpOnly: false,
-        // sameSite: 'strict',
       })
 
       res.json(credentials);
@@ -240,6 +263,11 @@ if (!IS_DEMO_MODE) {
     next();
   })
 } else {
+  api.get('/audit', cookieParser(), (req, res, next) => {
+    res.type('text/plain');
+    res.send('Audit logs not enabled in demo mode.')
+  })
+  
   rp.use(cookieParser(), Auth.demo.middleware);
   
   /**
@@ -251,12 +279,10 @@ if (!IS_DEMO_MODE) {
       res.cookie('usertoken', credentials.token, {
         path: '/api',
         httpOnly: true,
-        // sameSite: 'strict',
       });
       res.cookie('userid', credentials.userid, {
         path: '/',
         httpOnly: false,
-        // sameSite: 'strict',
       })
       req.user = { userid: credentials.userid, demo: true };
       next();
@@ -288,11 +314,10 @@ if (!IS_DEMO_MODE) {
         content: 'Welcome to the Demo RP! Feel free to test out this app here!',
         ...meta
       })
-      const passphrase = temporaryPassphrase();
       Msgs.put({
         type: 'text',
         who: cid,
-        content: `When you are ready do this: https://glitch.com/edit/#!/remix/rpnow?LOCKDOWN=%22no%22&PASSCODE=%22${passphrase.replace(/ /g, '%20')}%22\n\nThe passcode will be: "${passphrase}" (But you can change it later.)`,
+        content: 'When you are ready, go here to find out how to make your own server on glitch.com: https://glitch.com/~rpnow',
         ...meta
       })
     }
@@ -393,7 +418,7 @@ rp.get('/', (req, res, next) => {
 /**
  * Get and download a .txt file for an entire RP
  */
-rp.get('/download.txt', (req, res, next) => {
+rp.post('/download.txt', (req, res, next) => {
   const { Msgs, Charas, getTitle } = getContext(req);
 
   const msgs = Msgs.iterator();
@@ -473,7 +498,7 @@ rp.put('/charas', express.json(), (req, res, next) => {
 /**
  * Add webhook
  */
-rp.put('/webhook', express.json(), (req, res, next) => {
+rp.post('/webhook', express.urlencoded(), (req, res, next) => {
   const { Webhooks } = getContext(req);
   const { userid } = req.user;
   const { webhook } = req.body;
@@ -484,17 +509,17 @@ rp.put('/webhook', express.json(), (req, res, next) => {
   
   Webhooks.put({ webhook, userid });
   
-  res.sendStatus(204);
+  res.redirect('/settings.html');
 });
 
 /**
  * Update RP title
  */
-rp.put('/title', express.json(), (req, res, next) => {
+rp.post('/title', express.urlencoded(), (req, res, next) => {
   const { setTitle } = getContext(req);
   
   setTitle(req.body.title);
-  res.sendStatus(204);
+  res.redirect('/settings.html');
 });
 
 /**

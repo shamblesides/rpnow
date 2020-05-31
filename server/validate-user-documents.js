@@ -82,6 +82,6 @@ module.exports.user = obj({
 });
   
 module.exports.webhook = obj({
-  webhook: matchRegex(/^https:\/\/discordapp.com\/api\/webhooks\/[\w/]+/, 'a Discord webhook'),
+  webhook: matchRegex(/^https:\/\/discord(?:app)?.com\/api\/webhooks\/[\w/_]+/, 'a Discord webhook'),
   userid,
 });
