@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Edit Characters</title>
+  
+  <style>
+    ul {
+      padding: 0;
+    }
+    li {
+      list-style-type: none;
+      margin: 8px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Edit Characters</h1>
+  </header>
+
+  <ul>
+    <li>Narrator</li>
+    <li>Out of Character</li>
+  </ul>
+  
+  <ul id="chara-list">
+  </ul>
+  
+  <ul>
+    <li>
+      <details>
+        <summary>🆕 New Character...</summary>
+        <form onsubmit="sendChara(event)">
+          <label>
+            Name <input type="text" name="name" maxlength="30" required> <br/>
+          </label>
+          <label>
+            Color <input type="color" name="color" value="#bbeeff"> <br/>
+          </label>
+          <button type="submit" class="text-button">Create ➔</button>
+          <button type="reset" class="text-button" onclick="this.closest('details').open=false">Cancel ✘</button>
+        </form>
+      </details>
+    </li>
+  </ul>
+
+  <template id="chara-row">
+    <li>
+      <details>
+        <summary class="chara-name"></summary>
+        <form onsubmit="sendEditedChara(event)">
+          <input type="hidden" name="_id">
+          <label>
+            Name <input type="text" name="name" maxlength="30" required> <br/>
+          </label>
+          <label>
+            Color <input type="color" name="color"> <br/>
+          </label>
+          <button type="submit" class="text-button">Save ➔</button>
+          <button type="reset" class="text-button" onclick="this.closest('details').open=false">Cancel ✘</button>
+        </form>
+      </details>
+    </li>
+  </template>
+  
+  <script src="rp.js"></script>
+  
+  <script>
+    function sendChara(event) {
+      event.preventDefault();
+      RP.sendChara({
+        name: event.target.elements.name.value,
+        color: event.target.elements.color.value,
+      }, function() {
+        event.target.querySelector('[name=name]').value = '';
+      })
+    }
+    function sendEditedChara(event) {
+      event.preventDefault();
+      RP.sendChara({
+        _id: event.target.elements._id.value,
+        name: event.target.elements.name.value,
+        color: event.target.elements.color.value,
+      })
+    }
+    function buildCharaRow(data) {
+      if (data.userid !== RP.myUserID) {
+        var el = document.createElement('li');
+        el.innerText = data.name;
+        return el;
+      } else {
+        var el = document.querySelector('template#chara-row').content.cloneNode(true).querySelector('*');
+        el.id = data._id;
+        el.dataset.rev = data._rev;
+        el.classList.add(data._id);
+        el.querySelector('summary').innerText = data.name;
+        el.querySelector('form [name=_id]').value = data._id;
+        el.querySelector('form [name=name]').defaultValue = data.name;
+        el.querySelector('form [name=color]').defaultValue = data.color;
+        return el;
+      }
+    }
+  </script>
+  
+  <script>
+    var charaList = document.getElementById('chara-list');
+    
+    function addTo(el, container) {
+      var oldEl = document.getElementById(el.id)
+      if (oldEl) {
+        if (el.dataset.rev && oldEl.dataset.rev == el.dataset.rev) {
+          // then just ignore the new element, it should be exactly the same
+        } else {
+          container.replaceChild(el, oldEl);
+        }
+      } else {
+        container.appendChild(el);
+      }
+      return oldEl;
+    }
+    
+    RP.initialize(0, {
+      init(data) {
+        for (var ch of data.charas) {
+          var el = buildCharaRow(ch);
+          addTo(el, charaList);
+        }
+      },
+      chara(data) {
+        var el = buildCharaRow(data);
+        addTo(el, charaList);
+      },
+      error(err, willRetry) {
+        console.error(err);
+        setError(err);
+      }
+    })
+  </script>
+
+  <!-- <input type="color"> polyfill -->
+  <link rel="stylesheet" href="/libraries/spectrum.css">
+  <script src="/libraries/jquery.min.js"></script>
+  <script src="/libraries/spectrum.js"></script>
+</body>

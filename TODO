@@ -1,13 +1,12 @@
 NEXT
 ----
-check for and notify users of updated rpnow server: GET http://registry.npmjs.org/rpnow
-server-side beacon
-destroy all to-do's in the code
+bug: RP.myUserID seems to not update sometimes..? Investigate it
 go through console errors
 read through source and clean up the bits
  * console.log
  * commented-out code
  * outdated comments
  * also add new comments for things that need it (lots!)
+ * inline styles
 https://launch-checklist.glitch.me/
 rpnow3 (other project) should import/export webhooks

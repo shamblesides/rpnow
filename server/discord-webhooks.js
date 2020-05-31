@@ -1,54 +1,38 @@
-const https = require('https');
-const url = require('url');
-
-function httpsPost(urlString, bodyObj) {
-  const bodyString = JSON.stringify(bodyObj);
-  const req = https.request(
-    {
-      ...url.parse(urlString),
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': bodyString.length
-      }
-    },
-  );
-  req.write(bodyString);
-  req.end();
-}
+const fetch = require('node-fetch');
 
 module.exports = {
   send(webhooks, title, msg, chara) {
-    const embed = {
-      footer: {
-        text: title
-      },
-      url: `https://${process.env.PROJECT_DOMAIN}.glitch.me`,
+    const embed = {}
+    
+    if (process.env.PROJECT_DOMAIN) { // a glitch.me environment variable
+      embed.url = `https://${process.env.PROJECT_DOMAIN}.glitch.me`
     }
 
     if (msg.type === 'image') {
       embed.title = 'New image post';
     } else if (msg.type === 'text') {
-      if (chara) {
-        embed.color = parseInt(chara.color.slice(1), 16);
-      }
-      
-      let bodyText = '';
-      bodyText += (chara && chara.name) || ({narrator:'Narrator', ooc:'OOC'})[msg.who] || '???';
-      bodyText += ': ';
-      
-      if (msg.content.length > 20) {
-        bodyText += msg.content.slice(0, 20) + "..."
+      if (msg.who === 'narrator') {
+        embed.title = 'New narrator post';
+      } else if (msg.who === 'ooc') {
+        embed.title = 'New OOC post';
       } else {
-        bodyText += msg.content;
+        if (chara) {
+          embed.color = parseInt(chara.color.slice(1), 16);
+        }
+        embed.title = 'New character post';
       }
-      embed.title = bodyText
+    } else {
+      embed.title = 'Unknown post'
     }
 
     const body = { embeds: [embed] };
 
     for (const webhook of webhooks) {
-      httpsPost(webhook, body);
+      fetch(webhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
     }
   }
 }

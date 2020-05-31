@@ -111,7 +111,6 @@ window.RP = (function() {
     var onerror = callbacks.error;
     
     jsonStream(`/api/rp?page=${page}`, function(update) {
-      console.log(update);
       if (update.type === 'init') {
         oninit(update.data);
       } else if (update.type === 'title') {
@@ -176,7 +175,7 @@ window.RP = (function() {
     .then(callback)
   }
 
-  exports.changeMyUsername = function changeTitle(name, callback) {
+  exports.changeMyUsername = function changeMyUsername(name, callback) {
     return requestWithJSON('PUT', '/api/rp/username', { name: name })
     .catch(alertError)
     .then(callback)
@@ -186,6 +185,17 @@ window.RP = (function() {
     return requestWithJSON('PUT', '/api/rp/webhook', { webhook: webhook })
     .catch(alertError)
     .then(callback)
+  }
+  
+  exports.checkForUpdates = function checkForUpdates() {
+    return request('GET', '/api/version')
+    .then(function (versions) {
+      if (versions.current === versions.latest) {
+        return new Promise(function() {}); // never return
+      } else {
+        return versions;
+      }
+    })
   }
   
   Object.defineProperty(exports, 'myUserID', { get: function() {

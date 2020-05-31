@@ -29,10 +29,11 @@
 </form>
 
 <h2>Import Existing</h2>
+<p>
+  <em>If you have a <code>.json</code> file, you will need to convert it <a href="https://rp-converter.glitch.me/" target="_blank">at this page.</a></em>
+</p>
 <form action="/api/setup" method="POST" enctype="multipart/form-data">
-  <input type="file" name="file" accept=".txt" required>
+  <input type="file" name="file" accept=".rprecord" required>
   <br>
   <button type="submit" class="text-button">Upload</button>
 </form>
-
-<!-- TODO this page might not be good enough -->

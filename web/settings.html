@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>RP Settings</title>
+</head>
+
+<body>
+  <h1>
+    👷 RP Settings
+  </h1>
+  <h3>📓 Change Title</h3>
+  <form action="/api/rp/title" method="POST">
+    <input name="title" type="text" maxlength="30" placeholder="My Story" required>
+    <button type="submit">Change</button>
+  </form>
+  
+  <h3>🌐 Add Webhook</h3>
+  <p>
+    It's extremely easy to make a bot on your <a href="https://discordapp.com/" target="_blank">Discord</a> server
+    that messages one of your channels any time a new message is posted.
+    <a href="https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks" target="_blank">
+      This guide shows how to generate a webhook URL in Discord.
+    </a>
+    Once you've done that, paste that URL below.
+  </p>
+  <p>
+    (If you want to stop using the webhook, simply delete it in Discord.)
+  </p>
+  <form action="/api/rp/webhook" method="POST">
+    <input name="webhook" type="text" placeholder="Paste URL Here" required>
+    <button type="submit">Add</button>
+  </form>
+  
+  <h3>🔍 Audit Logins</h3>
+  <p>
+    The server records whenever anyone tries to enter a passphrase to access the RP, whether or not they
+    were successful. If you're worried about someone being here that's not supposed to be, this is how
+    you check.
+  </p>
+  <a href="/api/audit" target="_blank">
+    View audit log
+  </a>
+
+  <h3>📋 Download Text File</h3>
+  <p>
+    Download the entire story to your computer as a plain text file.
+  </p>
+  <form action="/api/rp/download.txt" method="POST" target="_blank">
+    <label>
+      <input type="checkbox" name="includeOOC" value="true" checked>
+      Include OOC messages
+    </label>
+    <br>
+    <button type="submit">Download</button>
+  </form>
+  
+  <h3>📦 Download Database Backup</h3>
+  <p>
+    Download all the data on the server in a format that can be imported again later.
+    There are a few reasons this might be helpful
+  </p>
+  <ul>
+    <li>Periodic backups, for safety</li>
+    <li>Moving the server to a new location</li>
+    <li>Making an RP template, with preset characters</li>
+    <li>Manually editing the database file? (Ask Nigel)</li>
+  </ul>
+  <form action="/api/rp/export" method="POST" target="_blank">
+    <button type="submit">Download</button>
+  </form>
+</body>

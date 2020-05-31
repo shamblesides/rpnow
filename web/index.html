@@ -7,39 +7,63 @@
   <meta name="apple-mobile-web-app-title" content="My RP">
   <title>Loading...</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="custom.css">
 </head>
 
 <body>
-  <!-- TODO consider making this non-sticky -->
+  <aside class="error">JavaScript is required for this page to work!</aside>
+  <script>document.querySelector('aside.error').innerText = ''</script>
+  
   <header>
-    <button onclick="openPopup('main-menu')">≡</button>
     <h1 id="title"></h1>
+
+    <nav id="pager">
+      <a class="icon-button" id="prev-page">⬅</a>
+      <form>
+        <select name="page" onchange="this.closest('form').submit()"></select>
+      </form>
+      <a class="icon-button" id="next-page">➡</a>
+    </nav>
+
+    <details id="settings">
+      <summary>
+        Settings
+      </summary>
+      <div>
+        Hello, <span id="my-user-name" class="user-name"></span>
+        <button type="button" class="text-button" onclick="openUsernameDialog()">
+          Change
+        </button>
+        <button type="submit" class="text-button" form="logout-form">
+          Logout
+        </button>
+      </div>
+      <input type="checkbox" id="audio-alerts" data-persist="audioAlerts"/>
+      <label for="audio-alerts">Audio alerts</label>
+      <br>
+      <input type="checkbox" id="quicksend" data-persist="quicksend"/>
+      <label for="quicksend">Quick send</label>
+      <br>
+      <a href="settings.html" target="_blank">👷 RP Settings</a>
+    </details>
+    <form action="/api/logout" method="POST" style="display:none" id="logout-form"></form>
   </header>
   
-  <nav id="pager">
-    <a class="icon-button" id="prev-page">←</a>
-    <form>
-      <select name="page" onchange="this.closest('form').submit()"></select>
-    </form>
-    <a class="icon-button" id="next-page">→</a>
-  </nav>
-  
-  <aside class="error"></aside>
-  
-  <noscript>
-    <aside class="error">JavaScript is required for this page to work!</aside>
-  </noscript>
-
   <form id="send-box" class="chara-bg" onsubmit="sendMessage(event)" data-page="chat">
     <input type="hidden" name="type" value="text">
-    <button type="button" class="change-chara chara-name" onclick="openPopup('character-menu')"></button>
+    <select class="change-chara" name="who" onchange="selectSpeaker(this.value)">
+      <option value="narrator">📖 Narrator</option>
+      <option value="ooc">💬 Out of Character</option>
+    </select>
+    <a class="icon-button" target="_blank" href="charas.html">👥</a>
     <button type="button" class="icon-button" onclick="openPopup('image-dialog')">🖼️</button>
+    <a class="icon-button" target="_blank" href="format.html">🎀</a>
     <textarea name="content" rows="3" maxlength="10000" placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist="sendBoxText"></textarea>
-    <button type="submit">➤</button> <!-- TODO ⏳ -->
+    <button type="submit">➤</button>
   </form>
   
-  <form id="image-dialog" class="dialog" oninput="this.querySelector('img').src=(this.checkValidity() ? url.value : '')" onreset="console.log(this); this.querySelector('img').src=''" onsubmit="sendImage(event)" data-page="chat">
-    <h3>Image URL</h3>
+  <form id="image-dialog" class="dialog" oninput="this.querySelector('img').src=(this.checkValidity() ? url.value : '')" onreset="this.querySelector('img').src=''" onsubmit="sendImage(event)" data-page="chat">
+    <h3>Image Post</h3>
     <input type="hidden" name="type" value="image">
     <input type="hidden" name="_id">
     <input name="url" type="url" ref="urlbox" required placeholder="Enter a URL">
@@ -47,105 +71,6 @@
     <button type="submit" class="text-button">Send ➤</button>
     <button type="reset" class="text-button" onclick="closeMe(event)">Cancel ✘</button>
   </form>
-
-  <!-- TODO consider dissolving this into some links at the top of the page -->
-  <section id="main-menu" class="drawer drawer-left">
-    <header>
-      <h2>Menu</h2>
-      <button class="close-button" onclick="closeMe(event)" title="Close">×</button>
-    </header>
-
-    <div class="drawer-body">
-      <label>
-        🌒 Night mode
-        <input type="checkbox" data-persist="nightMode" onchange="darkMode(event.target.checked)"/>
-      </label>
-      <label>
-        🔈 Audio Alerts
-        <input type="checkbox" id="audio-alerts" data-persist="audioAlerts"/>
-      </label>
-      <label>
-        ⏩ Quick send
-        <input type="checkbox" id="quicksend" data-persist="quicksend"/>
-      </label>
-      <hr/>
-      <a href="format.html" target="_blank">
-        🎀 View formatting info
-      </a>
-      <hr/>
-      <button onclick="openTitleDialog()">
-        📓 Change story title...
-      </button>
-      <button onclick="openWebhookDialog()">
-        🌐 Add Discord webhook...
-      </button>
-      <button onclick="openUsernameDialog()">
-        👤 Change my username...
-      </button>
-      <hr/>
-      <details>
-        <summary>📃 Download .TXT</summary>
-        <form action="/api/rp/download.txt" target="_blank">
-          <label>
-            <input type="checkbox" name="includeOOC" value="true" checked>
-            Include OOC messages
-          </label>
-          <br>
-          <button type="submit" class="text-button">Download</button>
-        </form>
-      </details>
-      <a href="/api/audit" target="_blank">
-        🔍 Audit logins
-      </a>
-      <details>
-        <summary>📦 Export database</summary>
-        <form action="/api/rp/export" method="POST" target="_blank">
-          <p>
-            This will download all RP data and history in a format that can be imported into a new server.
-          </p>
-          <button type="submit" class="text-button">Download</button>
-        </form>
-      </details>
-      <hr/>
-      <form action="/api/logout" method="POST" style="display:none" id="logout-form"></form>
-      <button type="submit" form="logout-form">
-        🚪 Logout
-      </button>
-    </div>
-  </section>
-
-  <!-- TODO consider dropping this drawer in favor of a simple select tag -->
-  <section id="character-menu" class="drawer drawer-right drawer-dock-1024" data-page="chat">
-    <header>
-      <h2>Characters</h2>
-      <button class="close-button" onclick="closeMe(event)" title="Close">×</button>
-    </header>
-
-    <div class="drawer-body">
-      <label>
-        <input type="radio" form="send-box" name="who" value="narrator" onchange="selectSpeaker(this.value)">
-        Narrator
-      </label>
-      <label>
-        <input type="radio" form="send-box" name="who" value="ooc" onchange="selectSpeaker(this.value)">
-        Out of Character
-      </label>
-      <hr/>
-      <details id="new-chara">
-        <summary>🆕 New Character...</summary>
-        <form onsubmit="sendChara(event)">
-          <label>
-            Name <input type="text" name="name" maxlength="30" required> <br/>
-          </label>
-          <label>
-            Color <input type="color" name="color" value="#bbeeff"> <br/>
-          </label>
-          <button type="submit" class="text-button">Create ➔</button>
-          <button type="reset" class="text-button" onclick="this.closest('details').open = false">Cancel ✘</button>
-        </form>
-      </details>
-    </div>
-  </section>
   
   <main>
     <p id="loading-messages" class="notice">
@@ -157,9 +82,7 @@
     </div>
   </main>
   
-  <div class="overlay drawer-overlay" data-what="drawer" onclick="closePopup(event)"></div>
-  
-  <div class="overlay dialog-overlay" data-what="dialog" onclick="closePopup(event)"></div>
+  <div class="dialog-overlay" data-what="dialog" onclick="closePopup(event)"></div>
 
   <!-- Templates should go below all elements -->
   <!-- (Because of an iOS9 bug!) -->
@@ -184,31 +107,17 @@
   </template>
 
   <template id="msg-image">
-    <div class="message">
+    <div class="message message-image">
       <button class="history-button" onclick="showHistory(event)">edits</button>
       <button class="edit-button icon-button" onclick="editImage(event)">✎</button>
       <img alt="User posted image">
     </div>
   </template>
 
-  <template id="chara-button">
-    <div class="chara-row">
-      <label>
-        <input type="radio" form="send-box" name="who" onchange="selectSpeaker(this.value)">
-        <span class="chara-name"></span>
-        <button class="edit-button icon-button" onclick="toggleEditing(event)">✎</button>
-      </label>
-      <form onsubmit="sendEditedChara(event)">
-        <input type="hidden" name="_id">
-        <label>
-          Name <input type="text" name="name" maxlength="30" required> <br/>
-        </label>
-        <label>
-          Color <input type="color" name="color" value="#bbeeff"> <br/>
-        </label>
-        <button type="submit" class="text-button">Save ➔</button>
-        <button type="reset" class="text-button" onclick="toggleEditing(event)">Cancel ✘</button>
-      </form>
+  <template id="msg-unknown">
+    <div class="message">
+      <h3>Unknown message type!</h3>
+      <dl></dl>
     </div>
   </template>
 
@@ -230,7 +139,8 @@
       .forEach(closeElement);
     }
     function closeMe(event) {
-      closeElement(event.target.closest('.drawer, .dialog'));
+      var el = event.target.closest('.dialog');
+      closeElement(el);
     }
     function closeElement(el) {
       if (el && el.classList.contains('open')) {
@@ -245,7 +155,7 @@
       }
     }
     function toggleEditing(event) {
-      event.target.closest('.message, .chara-row').classList.toggle('editing');
+      event.target.closest('.message').classList.toggle('editing');
     }
     function editImage(event) {
       var message = event.target.closest('.message');
@@ -254,9 +164,6 @@
       document.getElementById('image-dialog').elements['url'].value = src;
       document.getElementById('image-dialog').querySelector('img').src = src;
       openPopup('image-dialog');
-    }
-    function darkMode(isDark) {
-      document.body.classList.toggle('dark-theme', isDark);
     }
     function quicksend(event, applySetting) {
       if (event.key !== 'Enter' || event.shiftKey) return;
@@ -269,20 +176,6 @@
       var form = document.querySelector('#send-box')
       form.className = 'chara-bg '+speaker;
       form.elements.who.value = speaker;
-    }
-    function openTitleDialog() {
-      var title = prompt('Enter the title for this RP:', document.getElementById('title').innerText);
-      if (title != null) {
-        RP.changeTitle(title);
-      }
-    }
-    function openWebhookDialog() {
-      var webhook = prompt('Webhook URL, please:');
-      if (webhook) {
-        RP.addWebhook(webhook, function() {
-          alert('Webhook added successfully')
-        })
-      }
     }
     function openUsernameDialog() {
       var name = prompt('What will you, the writer, be known by?');
@@ -344,32 +237,10 @@
       })
     }
     
-    function sendChara(event) {
-      event.preventDefault();
-      RP.sendChara({
-        name: event.target.elements.name.value,
-        color: event.target.elements.color.value,
-      }, function() {
-        event.target.querySelector('[name=name]').value = '';
-      })
-    }
-    function sendEditedChara(event) {
-      toggleEditing(event);
-      event.preventDefault();
-      RP.sendChara({
-        _id: event.target.elements._id.value,
-        name: event.target.elements.name.value,
-        color: event.target.elements.color.value,
-      })
-    }
     function showHistory(event) {
       var id = event.target.closest('.message').id;
       window.open(`diff.html?id=${id}`, '_blank');
     }
-  </script>
-  
-  <script>
-    darkMode(localStorage.getItem('rpsettings.nightMode') === 'true')
   </script>
   
   <script>
@@ -447,6 +318,10 @@
 
   <script src="rp.js"></script>
   <script src="format-rp-message.js"></script>
+  
+  <script>
+    document.getElementById('my-user-name').dataset.userid = RP.myUserID;
+  </script>
 
   <script>
     function contrast(color) {
@@ -466,12 +341,8 @@
       style.innerHTML = `
         .${data._id}.chara-bg,
         .${data._id} .chara-bg {
-          color: ${contrast(data.color)} !important;
-          background-color: ${data.color} !important;
-        }
-        .${data._id}.chara-text,
-        .${data._id} .chara-text {
-          color: ${data.color} !important;
+          color: ${contrast(data.color)};
+          background-color: ${data.color};
         }
         .${data._id}.chara-name::before,
         .${data._id} .chara-name::before {
@@ -489,27 +360,13 @@
         }`
       return style;
     }
-    function buildCharaButton(data) {
-      var el = document.querySelector('template#chara-button').content.cloneNode(true).querySelector('*');
-      el.id = data._id;
-      el.dataset.rev = data._rev;
-      if (data.userid !== RP.myUserID) {
-        el.querySelector('.edit-button').style.display = 'none';
-      }
-      el.classList.add(data._id);
-      el.querySelector('input[type=radio]').value = data._id;
-      el.querySelector('form [name=_id]').value = data._id;
-      el.querySelector('form [name=name]').defaultValue = data.name;
-      el.querySelector('form [name=color]').defaultValue = data.color;
-      return el;
-    }
     function buildMessageElement(data) {
       var template = document.querySelector('template#msg-'+data.type) || document.querySelector('template#msg-unknown');
       var el = template.content.cloneNode(true).querySelector('*');
       el.id = data._id;
       el.dataset.rev = data._rev;
       el.dataset.userid = data.userid;
-      if (data.userid !== RP.myUserID) {
+      if (data.userid !== RP.myUserID && el.querySelector('.edit-button')) {
         el.querySelector('.edit-button').style.display = 'none';
       } 
       if (data.type === 'text') {
@@ -522,10 +379,27 @@
         el.querySelector('blockquote').innerHTML = formatRpMessage(data.content);
       } else if (data.type === 'image') {
         el.querySelector('img').src = data.url;
+      } else {
+        for (var prop of Object.keys(data)) {
+          var dt = document.createElement('dt');
+          var dd = document.createElement('dd');
+          dt.innerText = prop;
+          dd.innerText = JSON.stringify(data[prop]);
+          el.querySelector('dl').appendChild(dt);
+          el.querySelector('dl').appendChild(dd);
+        }
       }
       return el;
     }
-    function addTo(el, container, before) {
+    function buildCharaOption(data) {
+      var el = document.createElement('option');
+      el.id = data._id;
+      el.dataset.rev = data._rev;
+      el.value = data._id;
+      el.innerText = data.name;
+      return el;
+    }
+    function addTo(el, container) {
       var oldEl = document.getElementById(el.id)
       if (oldEl) {
         if (el.dataset.rev && oldEl.dataset.rev == el.dataset.rev) {
@@ -534,10 +408,17 @@
           container.replaceChild(el, oldEl);
         }
       } else {
-        container.insertBefore(el, before || null); // if "before" is null, then this is the end
+        container.appendChild(el);
       }
       return oldEl;
     }
+  </script>
+  
+  <script>var rpHooks = {}</script>
+  
+  <script src="custom.js"></script>
+  
+  <script>
     RP.initialize(pagenum || 0, {
       init(data) {
         setError(null);
@@ -551,21 +432,19 @@
           var style = charaStyles(ch);
           addTo(style, document.head);
 
-          var menu = document.querySelector('#character-menu .drawer-body');
-          if (menu) {
-            var el = buildCharaButton(ch);
-            addTo(el, menu, menu.querySelector('#new-chara'));
+          var dropdown = document.querySelector('#send-box select');
+          if (dropdown) {
+            var el = buildCharaOption(ch);
+            addTo(el, dropdown);
           }
         }
         for (var msg of data.msgs) {
           var main = document.querySelector('main');
           var el = buildMessageElement(msg);
           addTo(el, main);
+          if (rpHooks.onMessage) rpHooks.onMessage(msg, el, false);
         }
         
-        if (!pagenum) {
-          // window.scrollBy(0, 999999);
-        }
         for (var i = 1; i <= data.pageCount; ++i) {
           var optionEl = document.createElement('option');
           optionEl.value = i;
@@ -593,7 +472,6 @@
         if (loadingMsg) {
           loadingMsg.remove();
         }
-        console.log(RP.myUserID)
       },
       title(title) {
         document.title = title;
@@ -607,12 +485,12 @@
         var style = charaStyles(data);
         addTo(style, document.head);
         
-        var menu = document.querySelector('#character-menu .drawer-body');
-        if (menu) {
-          var el = buildCharaButton(data);
-          var oldEl = addTo(el, menu, menu.querySelector('#new-chara'));
-          if (oldEl && oldEl.querySelector('input[type=radio]').checked) {
-            el.querySelector('input[type=radio]').checked = true;
+        var dropdown = document.querySelector('#send-box select');
+        if (dropdown) {
+          var el = buildCharaOption(data);
+          var oldEl = addTo(el, dropdown);
+          if (oldEl && oldEl.selected) {
+            el.selected = true;
           }
         }
       },
@@ -624,6 +502,8 @@
         var main = document.querySelector('main');
         var el = buildMessageElement(data);
         var oldEl = addTo(el, main);
+        
+        if (rpHooks.onMessage) rpHooks.onMessage(data, el, !oldEl);
         
         if (!oldEl) {
           if (!pagenum) {
@@ -637,15 +517,12 @@
             window.scrollBy(0, 999999);
           }
 
-          // we show an alert if...
+          // we play an alert if...
           var isVisible = document.visibilityState === 'visible';
           if (!isVisible) {
             if (('alertNoise' in window) && (document.getElementById('audio-alerts') || {}).checked) { // might not have loaded yet!
               alertNoise.play();
             }
-
-            // TODO other notification methods
-            // like favicon image, title text, notification api
           }
         }
       },
@@ -656,16 +533,18 @@
     })
   </script>
 
-  <!-- <input type="color"> polyfill -->
-  <link rel="stylesheet" href="/libraries/spectrum.css">
-  <script src="/libraries/jquery.min.js"></script>
-  <script src="/libraries/spectrum.js"></script>
-
   <!-- alert audio -->
   <script src="/libraries/howler.core.min.js"></script>
   <script>
     var alertNoise = new Howl({
       src: ['https://cdn.glitch.com/0e12472f-d496-485a-a042-740bef658eb2%2Ftypewriter.mp3?v=1575714187192']
+    });
+  </script>
+  
+  <script>
+    RP.checkForUpdates()
+    .then(function(versions) {
+      alert(`New RPNow server available: ${versions.latest}`);
     });
   </script>
 </body>
