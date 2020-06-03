@@ -498,7 +498,7 @@ rp.put('/charas', express.json(), (req, res, next) => {
 /**
  * Add webhook
  */
-rp.post('/webhook', express.urlencoded(), (req, res, next) => {
+rp.post('/webhook', express.urlencoded({ extended: false }), (req, res, next) => {
   const { Webhooks } = getContext(req);
   const { userid } = req.user;
   const { webhook } = req.body;
@@ -515,7 +515,7 @@ rp.post('/webhook', express.urlencoded(), (req, res, next) => {
 /**
  * Update RP title
  */
-rp.post('/title', express.urlencoded(), (req, res, next) => {
+rp.post('/title', express.urlencoded({ extended: false }), (req, res, next) => {
   const { setTitle } = getContext(req);
   
   setTitle(req.body.title);
