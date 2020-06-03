@@ -317,7 +317,7 @@ if (!IS_DEMO_MODE) {
       Msgs.put({
         type: 'text',
         who: cid,
-        content: 'When you are ready, go here to find out how to make your own server on glitch.com: https://glitch.com/~rpnow',
+        content: 'When you are ready, go here to find out how to make your own server on glitch.com: https://glitch.com/edit/#!/remix/rpnow?PASSCODE=%22Change%20me%22&LOCKDOWN=no',
         ...meta
       })
     }
