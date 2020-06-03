@@ -1,7 +1,7 @@
 dependencies:
   cookie-parser: 1.4.5
   express: 4.17.1
-  express-jwt: 5.3.1
+  express-jwt: 5.3.3
   jsonwebtoken: 8.5.1
   multer: 1.4.2
   node-fetch: 2.6.0
@@ -166,7 +166,7 @@ packages:
       node: '>= 0.6'
     resolution:
       integrity: sha1-Qa4u62XvpiJorr/qg6x9eSmbCIc=
-  /express-jwt/5.3.1:
+  /express-jwt/5.3.3:
     dependencies:
       async: 1.5.2
       express-unless: 0.3.1
@@ -176,7 +176,7 @@ packages:
     engines:
       node: '>= 0.4.0'
     resolution:
-      integrity: sha512-1C9RNq0wMp/JvsH/qZMlg3SIPvKu14YkZ4YYv7gJQ1Vq+Dv8LH9tLKenS5vMNth45gTlEUGx+ycp9IHIlaHP/g==
+      integrity: sha512-UdB8p5O8vGYTKm3SfREnLgVGIGEHcL3lrVyi3ebEX2qhMuagN623ju7ywWis+qYL+CXE7G1qPc2bCPBAg2MxZQ==
   /express-unless/0.3.1:
     dev: false
     resolution:
@@ -658,7 +658,7 @@ shrinkwrapVersion: 3
 specifiers:
   cookie-parser: ^1.4.5
   express: ^4.17.1
-  express-jwt: ^5.3.1
+  express-jwt: ^5.3.3
   jsonwebtoken: ^8.5.1
   multer: ^1.4.2
   node-fetch: ^2.6.0

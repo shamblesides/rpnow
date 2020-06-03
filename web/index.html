@@ -318,10 +318,6 @@
 
   <script src="rp.js"></script>
   <script src="format-rp-message.js"></script>
-  
-  <script>
-    document.getElementById('my-user-name').dataset.userid = RP.myUserID;
-  </script>
 
   <script>
     function contrast(color) {
@@ -424,6 +420,7 @@
         setError(null);
         document.title = data.title;
         document.getElementById('title').innerText = data.title;
+        document.getElementById('my-user-name').dataset.userid = RP.myUserID;
         for (var user of data.users) {
           var style = userStyles(user);
           addTo(style, document.head);
