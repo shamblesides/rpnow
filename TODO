@@ -1,6 +1,5 @@
 NEXT
 ----
-bug: RP.myUserID seems to not update sometimes..? Investigate it
 go through console errors
 read through source and clean up the bits
  * console.log
