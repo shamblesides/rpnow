@@ -317,7 +317,7 @@ if (!IS_DEMO_MODE) {
       Msgs.put({
         type: 'text',
         who: cid,
-        content: 'When you are ready, go here to find out how to make your own server on glitch.com: https://glitch.com/~rpnow',
+        content: 'When you are ready, go here to find out how to make your own server on glitch.com: https://glitch.com/edit/#!/remix/rpnow?PASSCODE=%22Change%20me%22&LOCKDOWN=no',
         ...meta
       })
     }
@@ -498,7 +498,7 @@ rp.put('/charas', express.json(), (req, res, next) => {
 /**
  * Add webhook
  */
-rp.post('/webhook', express.urlencoded(), (req, res, next) => {
+rp.post('/webhook', express.urlencoded({ extended: false }), (req, res, next) => {
   const { Webhooks } = getContext(req);
   const { userid } = req.user;
   const { webhook } = req.body;
@@ -515,7 +515,7 @@ rp.post('/webhook', express.urlencoded(), (req, res, next) => {
 /**
  * Update RP title
  */
-rp.post('/title', express.urlencoded(), (req, res, next) => {
+rp.post('/title', express.urlencoded({ extended: false }), (req, res, next) => {
   const { setTitle } = getContext(req);
   
   setTitle(req.body.title);
