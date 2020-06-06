@@ -13,12 +13,7 @@ const validate = require('./validate-user-documents');
 const Auth = require('./auth');
 const discordWebhooks = require('./discord-webhooks');
 const fetch = require('node-fetch');
-
-const CHAT_SCROLLBACK = 10;
-const PAGE_LENGTH = 20;
-
-const PASSCODE = process.env.PASSCODE;
-const IS_DEMO_MODE = (PASSCODE === 'rpnow demo');
+const config = require('./config');
 
 console.info(`RPNow Server ${version}`);
 
@@ -148,18 +143,18 @@ function getContext(req) {
 }
 
 function getDBFilepath(req) {
-  if (IS_DEMO_MODE) {
+  if (config.isDemoMode) {
     return path.resolve(os.tmpdir(), `rpdemo-${req.user.userid}`)
   } else {
-    return path.resolve('.data/db');
+    return path.resolve(`${config.data}/db`);
   }
 }
 
 function getAuditLogFilepath(req) {
-  if (IS_DEMO_MODE) {
+  if (config.isDemoMode) {
     return null;
   } else {
-    return path.resolve('.data/audit');
+    return path.resolve(`${config.data}/audit`);
   }
 }
 
@@ -184,7 +179,7 @@ api.use('/rp', rp);
 /**
  * Different behavior for auth/setup for demo vs non-demo
  */
-if (!IS_DEMO_MODE) {
+if (!config.isDemoMode) {
   /**
    * Start new RP, or import from file
    */
@@ -212,14 +207,13 @@ if (!IS_DEMO_MODE) {
   });
   
   // Authentication
-  const { generateToken, authMiddleware, checkPasscode } = Auth(PASSCODE);
+  const { generateToken, authMiddleware, checkPasscode } = Auth(config.passcode);
 
   /**
    * Generate a new set of credentials for an anonymous user
    */
   api.post('/auth', express.json(), (req, res, next) => {
-    const isYes = (value) => value && ['true', 'yes', 'y'].includes(value.toLowerCase());
-    if (isYes(process.env.LOCKDOWN)) {
+    if (config.lockdown) {
       return res.status(403).json({ error: 'New logins not permitted' })
     }
     if (typeof req.body.passcode !== 'string' || req.body.passcode.length > 200) {
@@ -268,7 +262,7 @@ if (!IS_DEMO_MODE) {
     res.send('Audit logs not enabled in demo mode.')
   })
   
-  rp.use(cookieParser(), Auth.demo.middleware);
+  rp.use(cookieParser(), Auth.demo.middleware());
   
   /**
    * Catch UnauthorizedError and create demo session userid if we don't have one yet
@@ -349,8 +343,8 @@ rp.get('/', (req, res, next) => {
   
   const page = parseInt(req.query.page) || null;
   
-  const limit = page ? PAGE_LENGTH : CHAT_SCROLLBACK;
-  const pageCount = Math.ceil(Msgs.count() / PAGE_LENGTH) || 1;
+  const limit = page ? config.pageLength : config.chatScrollback;
+  const pageCount = Math.ceil(Msgs.count() / config.pageLength) || 1;
   
   if (page !== null && !(page >= 1 && page <= pageCount)) {
     throw new RangeError('invalid page');
@@ -569,7 +563,7 @@ api.use((err, req, res, next) => {
 });
 
 // start server
-const listener = server.listen(process.env.PORT || 13000, (err) => {
+const listener = server.listen(config.port, (err) => {
   if (err) {
     console.error(`Failed to start: ${err}`);
     process.exit(1);
