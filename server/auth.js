@@ -11,7 +11,6 @@ const filename = `${config.data}/.secret`;
 const nextID = idgen();
 
 function generateSecret() {
-  console.info('generating new secret');
   const jwtSecret = crypto.randomBytes(256/8)
   fs.writeFileSync(filename, jwtSecret, 'binary');
   return jwtSecret;
