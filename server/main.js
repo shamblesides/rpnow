@@ -563,8 +563,8 @@ api.use((err, req, res, next) => {
     res.status(401).json({ error: err.message });
   } else {
     res.status(400).json({ error: err.message });
+    console.error(err);
   }
-  console.error(err);
 });
 
 // start server
