@@ -19,6 +19,8 @@ console.info(`RPNow Server ${version}`);
 
 // Create data directory if it doesn't exist
 if (!fs.existsSync(config.data)) {
+  const fullPath = path.resolve(config.data);
+  console.info(`Creating new data directory at ${fullPath}`);
   fs.mkdirSync(config.data);
 }
 
