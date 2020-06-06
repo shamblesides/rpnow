@@ -17,6 +17,11 @@ const config = require('./config');
 
 console.info(`RPNow Server ${version}`);
 
+// Create data directory if it doesn't exist
+if (!fs.existsSync(config.data)) {
+  fs.mkdirSync(config.data);
+}
+
 // Express is our HTTP server
 const server = express();
 
