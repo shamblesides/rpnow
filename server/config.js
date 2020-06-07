@@ -9,7 +9,7 @@ const config = {
   isDemoMode: (process.env.PASSCODE === 'rpnow demo'),
   lockdown: isYes(process.env.LOCKDOWN),
   port: +process.env.PORT || 13000,
-  data: '.data',
+  data: process.argv[2] || 'rpdata',
 }
 
 if (!config.passcode) {

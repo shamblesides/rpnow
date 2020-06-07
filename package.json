@@ -15,7 +15,7 @@
   "main": "./server/main.js",
   "bin": "./server/main.js",
   "scripts": {
-    "start": "./server/main.js"
+    "start": "./server/main.js .data"
   },
   "dependencies": {
     "cookie-parser": "^1.4.5",
