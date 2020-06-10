@@ -161,26 +161,6 @@ function getDBFilepath(req) {
   }
 }
 
-function getAuditLogFilepath(req) {
-  if (config.isDemoMode) {
-    return null;
-  } else {
-    return path.resolve(`${config.data}/audit`);
-  }
-}
-
-function writeAuditLog(req, text) {
-  const filepath = getAuditLogFilepath(req);
-  if (fs.existsSync(filepath) && fs.statSync(filepath).size > 40000) {
-    const lines = fs.readFileSync(filepath, 'utf8').split('\n');
-    const clipped = Math.floor(lines.length * .25);
-    fs.writeFileSync(filepath, [`--- ${clipped} lines clipped ---`, ...lines.slice(clipped)].join('\n'));
-  }
-  
-  const timestamp = new Date().toUTCString();
-  fs.appendFileSync(filepath, `${timestamp} - ${text}\n`);
-}
-
 /**
  * Different behavior for auth/setup for demo vs non-demo
  */
@@ -213,6 +193,26 @@ if (!config.isDemoMode) {
   
   // Authentication
   const { generateToken, authMiddleware, checkPasscode } = Auth(config.passcode);
+
+  function getAuditLogFilepath(req) {
+    if (config.isDemoMode) {
+      return null;
+    } else {
+      return path.resolve(`${config.data}/audit`);
+    }
+  }
+
+  function writeAuditLog(req, text) {
+    const filepath = getAuditLogFilepath(req);
+    if (fs.existsSync(filepath) && fs.statSync(filepath).size > 40000) {
+      const lines = fs.readFileSync(filepath, 'utf8').split('\n');
+      const clipped = Math.floor(lines.length * .25);
+      fs.writeFileSync(filepath, [`--- ${clipped} lines clipped ---`, ...lines.slice(clipped)].join('\n'));
+    }
+    
+    const timestamp = new Date().toUTCString();
+    fs.appendFileSync(filepath, `${timestamp} - ${text}\n`);
+  }
 
   /**
    * Generate a new set of credentials for an anonymous user
