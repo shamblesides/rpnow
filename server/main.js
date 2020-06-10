@@ -65,7 +65,7 @@ api.use((req, res, next) => {
 })
 
 api.get('/version', (req, res, next) => {
-  fetch('https://registry.npmjs.org/rpnow')
+  fetch(`https://registry.npmjs.org/${require('../package.json').name}`)
   .then(res => res.json())
   .then(data => data['dist-tags'].latest)
   .then(latest => {
