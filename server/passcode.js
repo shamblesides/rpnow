@@ -65,6 +65,14 @@ api.get('/audit', cookieParser(), authMiddleware, (req, res, next) => {
   fs.createReadStream(filepath).pipe(res);
 })
 
-api.use('/rp', cookieParser(), authMiddleware);
+const unauthorized401 = (err, req, res, next) => {
+  if (err.name === 'UnauthorizedError') {
+    res.status(401).json({ error: err.message });
+  } else {
+    next(err);
+  }
+}
+
+api.use('/rp', cookieParser(), authMiddleware, unauthorized401);
 
 module.exports = api;

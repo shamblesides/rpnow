@@ -119,12 +119,8 @@ api.all('*', (req, res, next) => {
  * Error handling
  */
 api.use((err, req, res, next) => {
-  if (err.name === 'UnauthorizedError') {
-    res.status(401).json({ error: err.message });
-  } else {
-    res.status(400).json({ error: err.message });
-    console.error(err);
-  }
+  res.status(400).json({ error: err.message });
+  console.error(err);
 });
 
 // start server
