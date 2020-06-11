@@ -1,8 +1,7 @@
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const getContext = require('./context');
+const { getContext, initContext } = require('./context');
 
 const api = new express.Router();
 
@@ -18,9 +17,8 @@ const addContext = (req, res, next) => {
 
 const populateRP = (req, res, next) => {
   const dbFilepath = getDBFilepath(req);
-  if (!fs.existsSync(dbFilepath)) {
-    fs.writeFileSync(dbFilepath, '', { flag: 'wx' });
-    const { setTitle, Msgs, Charas, Users } = getContext(dbFilepath);
+  if (!getContext(dbFilepath)) {
+    const { setTitle, Msgs, Charas, Users } = initContext(dbFilepath);
     setTitle('My Demo RP');
     const meta = { userid: 'u-0000000', timestamp: new Date().toJSON() };
     const [{ _id: cid }] = Charas.put({ name: 'The RP Witch', color: '#8363cd', ...meta })

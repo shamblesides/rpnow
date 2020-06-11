@@ -52,7 +52,7 @@ function context(dbFilepath) {
 // Get context
 const contextCache = new Map();
 
-module.exports = function getContext(dbFilepath) {
+function getContext(dbFilepath) {
   if (contextCache.has(dbFilepath)) {
     return contextCache.get(dbFilepath);
   } else if (fs.existsSync(dbFilepath)) {
@@ -63,3 +63,10 @@ module.exports = function getContext(dbFilepath) {
     return null;
   }
 }
+
+function initContext(dbFilepath) {
+  fs.writeFileSync(dbFilepath, '', { flag: 'wx' });
+  return getContext(dbFilepath);
+}
+
+module.exports = { getContext, initContext };

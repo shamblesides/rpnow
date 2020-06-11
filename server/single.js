@@ -4,7 +4,7 @@ const path = require('path');
 const os = require('os');
 const upload = require('multer')({ dest: os.tmpdir() });
 const config = require('./config');
-const getContext = require('./context');
+const { getContext, initContext } = require('./context');
 
 const api = new express.Router();
 
@@ -33,9 +33,7 @@ api.post('/setup', (req, res, next) => {
       fs.unlinkSync(req.file.path);
     }
   } else {
-    // Create file (fail if exists)
-    fs.writeFileSync(dbFilepath, '', { flag: 'wx' });
-    const { setTitle } = getContext(dbFilepath);
+    const { setTitle } = initContext(dbFilepath);
     setTitle(req.body.title);
     res.redirect('/');
   }
