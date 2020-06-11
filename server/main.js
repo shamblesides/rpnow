@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
+console.info(`RPNow Server ${require('../package.json').version}`);
+
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const version = require('../package.json').version
 const fetch = require('node-fetch');
 const config = require('./config');
 const rp = require('./rp');
@@ -11,8 +12,6 @@ const demoAPI = require('./demo');
 const singleAPI = require('./single');
 const passcodeAuth = require('./passcode');
 const noAuth = require('./unsecured');
-
-console.info(`RPNow Server ${version}`);
 
 // Create data directory if it doesn't exist
 if (!fs.existsSync(config.data)) {
@@ -63,6 +62,7 @@ api.use((req, res, next) => {
 })
 
 api.get('/version', (req, res, next) => {
+  const version = require('../package.json').version;
   fetch(`https://registry.npmjs.org/${require('../package.json').name}`)
   .then(res => res.json())
   .then(data => data['dist-tags'].latest)
