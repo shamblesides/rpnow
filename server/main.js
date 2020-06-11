@@ -1,18 +1,16 @@
 #!/usr/bin/env node
 
 const express = require('express');
-const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
-const upload = require('multer')({ dest: os.tmpdir() });
 const version = require('../package.json').version
-const Store = require('./storage');
-const validate = require('./validate-user-documents');
-const Auth = require('./auth');
 const fetch = require('node-fetch');
 const config = require('./config');
 const rp = require('./rp');
+const demoAPI = require('./demo');
+const singleAPI = require('./single');
+const passcodeAuth = require('./passcode');
+const noAuth = require('./unsecured');
 
 console.info(`RPNow Server ${version}`);
 
@@ -84,245 +82,19 @@ api.get('/version', (req, res, next) => {
   .catch(next);
 })
 
-// A context object will store some DB connections etc
-function context(dbFilepath) {
-  // Message bus. Users connect upon entering chat
-  const rpListeners = new Set();
-  
-  function broadcast(obj) {
-    rpListeners.forEach(fn => fn(obj))
-  }
-  
-  function subscribe(callback) {
-    rpListeners.add(callback);
-    return () => rpListeners.delete(callback);
-  }
-  
-  // Database
-  const db = Store(dbFilepath);
-  
-  const Msgs =     db.prefix('m-').constrain(validate.msg).autoid()
-  const Charas =   db.prefix('c-').constrain(validate.chara).autoid()
-  const Users =    db.prefix('u-').constrain(validate.user);
-  const Webhooks = db.prefix('webhook-').constrain(validate.webhook).autoid()
-  
-  Msgs.updates.on('update', data => broadcast({ type: 'msgs', data }));
-  Charas.updates.on('update', data => broadcast({ type: 'charas', data }));
-  Users.updates.on('update', data => broadcast({ type: 'users', data }));
-
-  const getTitle = () => db.find('title').title;
-  function setTitle(title) {
-    if (typeof title !== 'string') throw new Error('invalid title');
-    if (title.length > 30) throw new Error('title too long');
-    if (!title) throw new Error('missing title');
-    db.put({ _id: 'title', title });
-    broadcast({ type: 'title', data: title });
-  }
-  
-  return {
-    subscribe,
-    Msgs,
-    Charas,
-    Users,
-    Webhooks,
-    getTitle,
-    setTitle,
-    dbFilepath,
-  }
-}
-
-// Get context
-const contextCache = new Map();
-
-function getContext(req) {
-  const dbFilepath = getDBFilepath(req);
-  
-  if (contextCache.has(dbFilepath)) {
-    return contextCache.get(dbFilepath);
-  } else if (fs.existsSync(dbFilepath)) {
-    const myContext = context(dbFilepath);
-    contextCache.set(dbFilepath, myContext);
-    return myContext;
-  } else {
-    return null;
-  }
-}
-
-const addContext = (req, res, next) => {
-  req.ctx = getContext(req);
-  next();
-}
-
-function getDBFilepath(req) {
-  if (config.isDemoMode) {
-    return path.resolve(os.tmpdir(), `rpdemo-${req.user.userid}`)
-  } else {
-    return path.resolve(`${config.data}/db`);
-  }
-}
-
-/**
- * Different behavior for auth/setup for demo vs non-demo
- */
-if (!config.isDemoMode) {
-  /**
-   * Start new RP, or import from file
-   */
-  api.post('/setup', (req, res, next) => {
-    if (getContext(req)) {
-      return res.sendStatus(409); // conflict
-    } else {
-      next();
-    }
-  }, upload.single('file'), (req, res, next) => {
-    if (req.file) {
-      try {
-        fs.copyFileSync(req.file.path, getDBFilepath(req));
-        res.redirect('/');
-      } finally {
-        fs.unlinkSync(req.file.path);
-      }
-    } else {
-      // Create file (fail if exists)
-      fs.writeFileSync(getDBFilepath(req), '', { flag: 'wx' });
-      const { setTitle } = getContext(req);
-      setTitle(req.body.title);
-      res.redirect('/');
-    }
-  });
-  
-  // Authentication
-  const { generateToken, authMiddleware, checkPasscode } = Auth(config.passcode);
-
-  function getAuditLogFilepath(req) {
-    if (config.isDemoMode) {
-      return null;
-    } else {
-      return path.resolve(`${config.data}/audit`);
-    }
-  }
-
-  function writeAuditLog(req, text) {
-    const filepath = getAuditLogFilepath(req);
-    if (fs.existsSync(filepath) && fs.statSync(filepath).size > 40000) {
-      const lines = fs.readFileSync(filepath, 'utf8').split('\n');
-      const clipped = Math.floor(lines.length * .25);
-      fs.writeFileSync(filepath, [`--- ${clipped} lines clipped ---`, ...lines.slice(clipped)].join('\n'));
-    }
-    
-    const timestamp = new Date().toUTCString();
-    fs.appendFileSync(filepath, `${timestamp} - ${text}\n`);
-  }
-
-  /**
-   * Generate a new set of credentials for an anonymous user
-   */
-  api.post('/auth', express.json(), (req, res, next) => {
-    if (config.lockdown) {
-      return res.status(403).json({ error: 'New logins not permitted' })
-    }
-    if (typeof req.body.passcode !== 'string' || req.body.passcode.length > 200) {
-      return res.status(400).json({ error: 'Invalid passcode' });
-    }
-    checkPasscode(req.body.passcode).then(correct => {
-      if (!correct) {
-        writeAuditLog(req, 'Invalid login attempt')
-        return res.status(401).json({ error: 'Wrong passcode' });
-      }
-
-      writeAuditLog(req, `New login with room passcode: ${req.body.passcode}`);
-
-      const credentials = generateToken(req.body.passcode);
-
-      res.cookie('usertoken', credentials.token, {
-        path: '/api',
-        httpOnly: true,
-      })
-      res.cookie('userid', credentials.userid, {
-        path: '/',
-        httpOnly: false,
-      })
-
-      res.json(credentials);
-    }).catch(next);
-  });
-  
-  api.get('/audit', cookieParser(), authMiddleware, (req, res, next) => {
-    const filepath = getAuditLogFilepath(req);
-    res.type('text/plain');
-    fs.createReadStream(filepath).pipe(res);
-  })
-
-  const maybeRedirectToSetup = (req, res, next) => {
-    if (!getContext(req)) {
-      return res.sendStatus(204);
-    }
-    next();
-  }
-
-  api.use('/rp', cookieParser(), authMiddleware, maybeRedirectToSetup, addContext, rp);
+if (config.isDemoMode) {
+  api.use(noAuth);
 } else {
-  api.get('/audit', (req, res, next) => {
-    res.type('text/plain');
-    res.send('Audit logs not enabled in demo mode.')
-  })
-  
-  /**
-   * Catch UnauthorizedError and create demo session userid if we don't have one yet
-   */
-  const autoAuth = (err, req, res, next) => {
-    if (err.name === 'UnauthorizedError') {
-      const credentials = Auth.demo.generateToken();
-      res.cookie('usertoken', credentials.token, {
-        path: '/api',
-        httpOnly: true,
-      });
-      res.cookie('userid', credentials.userid, {
-        path: '/',
-        httpOnly: false,
-      })
-      req.user = { userid: credentials.userid, demo: true };
-      next();
-    } else {
-      next(err);
-    }
-  };
-  
-  const populateRP = (req, res, next) => {
-    const dbFilepath = getDBFilepath(req);
-    if (!fs.existsSync(dbFilepath)) {
-      fs.writeFileSync(dbFilepath, '', { flag: 'wx' });
-      const { setTitle, Msgs, Charas, Users } = getContext(req);
-      setTitle('My Demo RP');
-      const meta = { userid: 'u-0000000', timestamp: new Date().toJSON() };
-      const [{ _id: cid }] = Charas.put({ name: 'The RP Witch', color: '#8363cd', ...meta })
-      Users.put({
-        _id: 'u-0000000',
-        name: 'DemoBot',
-      }),
-      Msgs.put({
-        type: 'image',
-        url: 'https://66.media.tumblr.com/be81b19872926ee3388ebf12c12c8c01/tumblr_ood5t2VSVM1urbwufo1_1280.png',
-        ...meta
-      })
-      Msgs.put({
-        type: 'text',
-        who: cid,
-        content: 'Welcome to the Demo RP! Feel free to test out this app here!',
-        ...meta
-      })
-      Msgs.put({
-        type: 'text',
-        who: cid,
-        content: 'When you are ready, go here to find out how to make your own server on glitch.com: https://glitch.com/edit/#!/remix/rpnow?PASSCODE=%22Change%20me%22&LOCKDOWN=no',
-        ...meta
-      })
-    }
-    next();
-  };
-
-  api.use('/rp', cookieParser(), Auth.demo.middleware(), autoAuth, populateRP, addContext, rp);
+  api.use(passcodeAuth);
 }
+
+if (config.isDemoMode) {
+  api.use(demoAPI);
+} else {
+  api.use(singleAPI);
+}
+
+api.use('/rp', rp)
 
 /**
  * Logout
