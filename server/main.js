@@ -5,9 +5,9 @@ console.info(`RPNow Server ${require('../package.json').version}`);
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const fetch = require('node-fetch');
 const config = require('./config');
-const rp = require('./rp');
+const rp = require('../rp/rp');
+const versionCheck = require('./version');
 const demoAPI = require('./demo');
 const singleAPI = require('./single');
 const passcodeAuth = require('./passcode');
@@ -39,86 +39,41 @@ server.use((req, res, next) => {
   }
 });
 
-// Serve frontend HTML, etc
-server.use(express.static(path.resolve(__dirname, '../web')));
+// TODO
+// api.use((req, res, next) => {
+//   res.set('Cache-Control', 'no-cache');
+//   next();
+// })
 
-// Load custom css/js in the current directory
-for (const file of ['custom.css', 'custom.js']) {
-  server.get('/'+file, (req, res, next) => {
-    if (fs.existsSync(file)) {
-      res.sendFile(path.resolve(file));
-    } else {
-      res.sendStatus(204);
-    }
-  });
-}
+server.get('/version', versionCheck)
 
-// API
-const api = new express.Router();
-server.use('/api', api);
-api.use((req, res, next) => {
-  res.set('Cache-Control', 'no-cache');
-  next();
-})
-
-api.get('/version', (req, res, next) => {
-  const version = require('../package.json').version;
-  fetch(`https://registry.npmjs.org/${require('../package.json').name}`)
-  .then(res => res.json())
-  .then(data => data['dist-tags'].latest)
-  .then(latest => {
-    res.json({
-      current: version,
-      latest,
-    })
-  })
-  .catch(err => {
-    console.error(err);
-    res.json({
-      current: version,
-      latest: version,
-    })
-  })
-  .catch(next);
-})
+server.get('/favicon.ico', (_, res) => res.sendStatus(404));
 
 if (config.isDemoMode) {
-  api.use(noAuth);
+  server.use(noAuth);
 } else {
-  api.use(passcodeAuth);
+  server.use(passcodeAuth);
 }
 
 if (config.isDemoMode) {
-  api.use(demoAPI);
+  server.use(demoAPI);
 } else {
-  api.use(singleAPI);
+  server.use(singleAPI);
 }
 
-api.use('/rp', rp)
-
-/**
- * Logout
- */
-api.post('/logout', (req, res, next) => {
-  res.cookie('usertoken', '', {
-    path: '/api',
-    httpOnly: true,
-    maxAge: 0,
-  });
-  res.redirect('/');
-});
+server.use('/rp', rp)
 
 /**
  * Default route (route not found)
  */
-api.all('*', (req, res, next) => {
+server.all('*', (req, res, next) => {
   next(new Error('unknown request'));
 });
 
 /**
  * Error handling
  */
-api.use((err, req, res, next) => {
+server.use((err, req, res, next) => {
   res.status(400).json({ error: err.message });
   console.error(err);
 });

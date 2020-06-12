@@ -1,12 +1,44 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { generateTextFile } = require('./txt-file');
 const discordWebhooks = require('./discord-webhooks');
-const config = require('./config');
+
+const config = {
+  chatScrollback: 10,
+  pageLength: 20,
+}
 
 // req.ctx should be set in a prior middleware
 const getContext = (req) => req.ctx;
 
-const rp = new express.Router();
+const router = new express.Router();
+
+const api = new express.Router();
+router.use('/api', api);
+
+api.use((req, res, next) => {
+  if (!req.user) {
+    res.status(401).json({ error: 'No credentials' });
+  } else {
+    next();
+  }
+})
+
+// Serve frontend HTML, etc
+router.use(express.static(path.resolve(__dirname, './web')));
+
+// Load custom css/js in the server's working directory
+for (const file of ['custom.css', 'custom.js']) {
+  const filepath = path.resolve(file);
+  router.get('/'+file, (req, res, next) => {
+    if (fs.existsSync(filepath)) {
+      res.sendFile(filepath);
+    } else {
+      res.sendStatus(204);
+    }
+  });
+}
 
 /**
  * Get RP info
@@ -15,7 +47,7 @@ const rp = new express.Router();
  * Can get the current chat stream, or a particular page
  * (a page is also a stream, since it can be edited)
  */
-rp.get('/', (req, res, next) => {
+api.get('/', (req, res, next) => {
   const { Msgs, Charas, Users, getTitle, subscribe } = getContext(req);
   
   const page = parseInt(req.query.page) || null;
@@ -89,7 +121,7 @@ rp.get('/', (req, res, next) => {
 /**
  * Get and download a .txt file for an entire RP
  */
-rp.post('/download.txt', (req, res, next) => {
+api.post('/download.txt', (req, res, next) => {
   const { Msgs, Charas, getTitle } = getContext(req);
 
   const msgs = Msgs.iterator();
@@ -107,7 +139,7 @@ rp.post('/download.txt', (req, res, next) => {
 /**
  * Export database
  */
-rp.post('/export', (req, res, next) => {
+api.post('/export', (req, res, next) => {
   const { getTitle, dbFilepath } = getContext(req);
   const title = getTitle();
   
@@ -118,7 +150,7 @@ rp.post('/export', (req, res, next) => {
 /**
  * Add/update msg
  */
-rp.put('/msgs', express.json(), (req, res, next) => {
+api.put('/msgs', express.json(), (req, res, next) => {
   const { Msgs, Webhooks, Charas, getTitle } = getContext(req);
   
   const { userid } = req.user;
@@ -149,7 +181,7 @@ rp.put('/msgs', express.json(), (req, res, next) => {
 /**
  * Add/update chara
  */
-rp.put('/charas', express.json(), (req, res, next) => {
+api.put('/charas', express.json(), (req, res, next) => {
   const { Charas } = getContext(req);
 
   const { userid } = req.user;
@@ -168,7 +200,7 @@ rp.put('/charas', express.json(), (req, res, next) => {
 /**
  * Add webhook
  */
-rp.post('/webhook', express.urlencoded({ extended: false }), (req, res, next) => {
+api.post('/webhook', express.urlencoded({ extended: false }), (req, res, next) => {
   const { Webhooks } = getContext(req);
   const { userid } = req.user;
   const { webhook } = req.body;
@@ -185,7 +217,7 @@ rp.post('/webhook', express.urlencoded({ extended: false }), (req, res, next) =>
 /**
  * Update RP title
  */
-rp.post('/title', express.urlencoded({ extended: false }), (req, res, next) => {
+api.post('/title', express.urlencoded({ extended: false }), (req, res, next) => {
   const { setTitle } = getContext(req);
   
   setTitle(req.body.title);
@@ -195,7 +227,7 @@ rp.post('/title', express.urlencoded({ extended: false }), (req, res, next) => {
 /**
  * Change my username
  */
-rp.put('/username', express.json(), (req, res, next) => {
+api.put('/username', express.json(), (req, res, next) => {
   const { Users } = getContext(req);
   const userid = req.user.userid;
   const name = req.body.name;
@@ -207,7 +239,7 @@ rp.put('/username', express.json(), (req, res, next) => {
 /**
  * Get a message's edit history
  */ 
-rp.get('/msgs/:doc_id([a-z0-9-]+)/history', (req, res, next) => {
+api.get('/msgs/:doc_id([a-z0-9-]+)/history', (req, res, next) => {
   const { Msgs, Users } = getContext(req);
   const _id = req.params.doc_id;
   const msgs = Msgs.history(_id);
@@ -219,4 +251,4 @@ rp.get('/msgs/:doc_id([a-z0-9-]+)/history', (req, res, next) => {
   res.json(msgs);
 });
 
-module.exports = rp;
+module.exports = router;

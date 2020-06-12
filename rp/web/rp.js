@@ -83,23 +83,6 @@ window.RP = (function() {
     })
   }
 
-  function auth() {
-    var passcode = prompt('Please enter the passcode for this room:');
-    if (passcode == null) {
-      return Promise.reject(new Error('No passcode provided'));
-    }
-    
-    return requestWithJSON('POST', '/api/auth', { passcode: passcode })
-    .catch(function (err) {
-      var retry = confirm(`Failed to authenticate. Retry? (${err})`);
-      if (retry) {
-        return auth();
-      } else {
-        throw err;
-      }
-    });
-  }
-
   exports.initialize = function initialize(page, callbacks) {
     var retry = initialize.bind(null, page, callbacks);
     
@@ -110,7 +93,7 @@ window.RP = (function() {
     var onuser = callbacks.user;
     var onerror = callbacks.error;
     
-    jsonStream(`/api/rp?page=${page}`, function(update) {
+    jsonStream(`api?page=${page}`, function(update) {
       if (update.type === 'init') {
         oninit(update.data);
       } else if (update.type === 'title') {
@@ -125,7 +108,7 @@ window.RP = (function() {
     })
     .then(function (xhr) {
       if (xhr.status === 204) { // No content
-        history.replaceState(null, '', 'setup.html');
+        history.replaceState(null, '', location.pathname + '/setup.html');
         location.reload();
       } else {
         // This stream isn't supposed to complete. If it does, that means that
@@ -135,13 +118,7 @@ window.RP = (function() {
     })
     .catch(function (err) {
       if (err.status === 401) { // Not logged in
-        auth()
-        .then(function() {
-          retry()
-        })
-        .catch(function (err) {
-          onerror(err)
-        });
+        window.location.replace('/auth');
       } else if (err.status) { // Server responded, but with some other error
         onerror(err);
       } else { // Connection error. We will retry
@@ -152,43 +129,43 @@ window.RP = (function() {
   }
 
   exports.sendMessage = function sendMessage(data, callback) {
-    return requestWithJSON('PUT', '/api/rp/msgs', data)
+    return requestWithJSON('PUT', 'api/msgs', data)
     .catch(alertError)
     .then(callback)
   }
 
   exports.sendChara = function sendChara(data, callback) {
-    return requestWithJSON('PUT', '/api/rp/charas', data)
+    return requestWithJSON('PUT', 'api/charas', data)
     .catch(alertError)
     .then(callback)
   }
 
   exports.getMessageHistory = function getMessageHistory(_id, callback) {
-    return request('GET', `/api/rp/msgs/${_id}/history`)
+    return request('GET', `api/msgs/${_id}/history`)
     .catch(alertError)
     .then(callback)
   }
 
   exports.changeTitle = function changeTitle(title, callback) {
-    return requestWithJSON('PUT', '/api/rp/title', { title: title })
+    return requestWithJSON('PUT', 'api/title', { title: title })
     .catch(alertError)
     .then(callback)
   }
 
   exports.changeMyUsername = function changeMyUsername(name, callback) {
-    return requestWithJSON('PUT', '/api/rp/username', { name: name })
+    return requestWithJSON('PUT', 'api/username', { name: name })
     .catch(alertError)
     .then(callback)
   }
 
   exports.addWebhook = function addWebhook(webhook, callback) {
-    return requestWithJSON('PUT', '/api/rp/webhook', { webhook: webhook })
+    return requestWithJSON('PUT', 'api/webhook', { webhook: webhook })
     .catch(alertError)
     .then(callback)
   }
   
   exports.checkForUpdates = function checkForUpdates() {
-    return request('GET', '/api/version')
+    return request('GET', '/version')
     .then(function (versions) {
       if (versions.current === versions.latest) {
         return new Promise(function() {}); // never return

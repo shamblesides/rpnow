@@ -70,6 +70,7 @@ module.exports = function (realpassString) {
         // a request is made, would be so slow!
         done(null, claims.roompass !== realpassString)
       },
+      credentialsRequired: false,
     }),
   };
 };
@@ -88,5 +89,6 @@ module.exports.demo = {
     getToken(req) {
       return req.cookies.usertoken || null;
     },
+    credentialsRequired: false,
   }),
 }

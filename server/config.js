@@ -3,8 +3,6 @@ function isYes(value) {
 }
 
 const config = {
-  chatScrollback: 10,
-  pageLength: 20,
   passcode: process.env.PASSCODE,
   isDemoMode: (process.env.PASSCODE === 'rpnow demo'),
   lockdown: isYes(process.env.LOCKDOWN),

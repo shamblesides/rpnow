@@ -26,6 +26,14 @@ function writeAuditLog(req, text) {
   fs.appendFileSync(filepath, `${timestamp} - ${text}\n`);
 }
 
+api.get('/auth', cookieParser(), authMiddleware, (req, res) => {
+  if (req.user) {
+    res.send(`<p>You already entered the passcode.<p><a href="/">Continue</a>`);
+  } else {
+    res.sendFile(path.resolve(__dirname, './web/passcode.html'))
+  }
+});
+
 /**
  * Generate a new set of credentials for an anonymous user
  */
@@ -46,14 +54,8 @@ api.post('/auth', express.json(), (req, res, next) => {
 
     const credentials = generateToken(req.body.passcode);
 
-    res.cookie('usertoken', credentials.token, {
-      path: '/api',
-      httpOnly: true,
-    })
-    res.cookie('userid', credentials.userid, {
-      path: '/',
-      httpOnly: false,
-    })
+    res.cookie('usertoken', credentials.token, { httpOnly: true });
+    res.cookie('userid', credentials.userid, { httpOnly: false });
 
     res.json(credentials);
   }).catch(next);
@@ -65,14 +67,21 @@ api.get('/audit', cookieParser(), authMiddleware, (req, res, next) => {
   fs.createReadStream(filepath).pipe(res);
 })
 
-const unauthorized401 = (err, req, res, next) => {
-  if (err.name === 'UnauthorizedError') {
-    res.status(401).json({ error: err.message });
-  } else {
-    next(err);
+/**
+ * Logout
+ */
+api.post('/logout', (req, res, next) => {
+  res.cookie('usertoken', '', { httpOnly: true, maxAge: 0 });
+  res.redirect('/');
+});
+
+const catchRevokedToken = (err, req, res, next) => {
+  if (err.code === 'revoked_token' || err.code === 'invalid_token') {
+    delete req.user;
   }
+  next();
 }
 
-api.use('/rp', cookieParser(), authMiddleware, unauthorized401);
+api.use(cookieParser(), authMiddleware, catchRevokedToken);
 
 module.exports = api;

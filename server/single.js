@@ -46,6 +46,10 @@ const maybeRequireSetup = (req, res, next) => {
   next();
 }
 
-api.use('/rp', maybeRequireSetup, addContext);
+api.get('/', (req, res) => {
+  res.redirect('/rp')
+})
+
+api.use(maybeRequireSetup, addContext);
 
 module.exports = api;

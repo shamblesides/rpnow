@@ -11,7 +11,7 @@
     👷 RP Settings
   </h1>
   <h3>📓 Change Title</h3>
-  <form action="/api/rp/title" method="POST">
+  <form action="api/title" method="POST">
     <input name="title" type="text" maxlength="30" placeholder="My Story" required>
     <button type="submit">Change</button>
   </form>
@@ -28,7 +28,7 @@
   <p>
     (If you want to stop using the webhook, simply delete it in Discord.)
   </p>
-  <form action="/api/rp/webhook" method="POST">
+  <form action="api/webhook" method="POST">
     <input name="webhook" type="text" placeholder="Paste URL Here" required>
     <button type="submit">Add</button>
   </form>
@@ -39,7 +39,7 @@
     were successful. If you're worried about someone being here that's not supposed to be, this is how
     you check.
   </p>
-  <a href="/api/audit" target="_blank">
+  <a href="/audit" target="_blank">
     View audit log
   </a>
 
@@ -47,7 +47,7 @@
   <p>
     Download the entire story to your computer as a plain text file.
   </p>
-  <form action="/api/rp/download.txt" method="POST" target="_blank">
+  <form action="api/download.txt" method="POST" target="_blank">
     <label>
       <input type="checkbox" name="includeOOC" value="true" checked>
       Include OOC messages
@@ -67,7 +67,7 @@
     <li>Making an RP template, with preset characters</li>
     <li>Manually editing the database file? (Ask Nigel)</li>
   </ul>
-  <form action="/api/rp/export" method="POST" target="_blank">
+  <form action="api/export" method="POST" target="_blank">
     <button type="submit">Download</button>
   </form>
 </body>

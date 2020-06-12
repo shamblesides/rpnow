@@ -46,7 +46,7 @@
       <br>
       <a href="settings.html" target="_blank">👷 RP Settings</a>
     </details>
-    <form action="/api/logout" method="POST" style="display:none" id="logout-form"></form>
+    <form action="/logout" method="POST" style="display:none" id="logout-form"></form>
   </header>
   
   <form id="send-box" class="chara-bg" onsubmit="sendMessage(event)" data-page="chat">
@@ -410,7 +410,7 @@
     }
   </script>
   
-  <script>var rpHooks = {}</script>
+  <script>var rpHooks = {};</script>
   
   <script src="custom.js"></script>
   
@@ -531,7 +531,7 @@
   </script>
 
   <!-- alert audio -->
-  <script src="/libraries/howler.core.min.js"></script>
+  <script src="libraries/howler.core.min.js"></script>
   <script>
     var alertNoise = new Howl({
       src: ['https://cdn.glitch.com/0e12472f-d496-485a-a042-740bef658eb2%2Ftypewriter.mp3?v=1575714187192']
