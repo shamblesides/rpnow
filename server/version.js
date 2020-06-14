@@ -13,7 +13,7 @@ module.exports = (req, res, next) => {
     })
   })
   .catch(err => {
-    console.error(err);
+    console.warn(`Couldn't fetch latest version. (${err.name}: ${err.message})`);
     res.json({
       current: version,
       latest: version,
