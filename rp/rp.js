@@ -1,9 +1,11 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const upload = require('multer')({ dest: os.tmpdir() });
 const { generateTextFile } = require('./txt-file');
 const discordWebhooks = require('./discord-webhooks');
-const { getContext: DB } = require('../server/context')
+const { getContext: DB, initContext: initDB } = require('../server/context')
 
 const config = {
   chatScrollback: 10,
@@ -17,6 +19,42 @@ const router = new express.Router();
 
 const api = new express.Router();
 router.use('/api', api);
+
+/**
+ * Start new RP, or import from file
+ */
+api.post('/setup', (req, res, next) => {
+  if (getContext(req)) {
+    return res.sendStatus(409); // conflict
+  } else {
+    next();
+  }
+}, upload.single('file'), (req, res, next) => {
+  const dbFilepath = req.roomFile;
+  if (req.file) {
+    try {
+      fs.copyFileSync(req.file.path, dbFilepath);
+      res.redirect('/');
+    } finally {
+      fs.unlinkSync(req.file.path);
+    }
+  } else {
+    const { setTitle } = initDB(dbFilepath);
+    setTitle(req.body.title);
+    res.redirect('/');
+  }
+});
+
+/**
+ * If it's not set up, then respond with 204 to indicate this
+ */
+api.use((req, res, next) => {
+  if (!getContext(req)) {
+    return res.sendStatus(204);
+  } else {
+    next();
+  }
+});
 
 api.use((req, res, next) => {
   if (!req.user) {
