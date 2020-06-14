@@ -3,7 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const ExpressJwt = require('express-jwt');
-const idgen = require('./idgen');
+const idgen = require('../util/idgen');
 const config = require('./config');
 
 const filename = `${config.data}/.secret`;

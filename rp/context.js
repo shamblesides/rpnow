@@ -1,5 +1,5 @@
 const fs = require('fs');
-const Store = require('./storage');
+const Store = require('../util/storage');
 const validate = require('./validate-user-documents');
 
 // A context object will store some DB connections etc

@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const os = require('os');
-const { getContext, initContext } = require('./context');
+const { getContext, initContext } = require('../rp/context');
 
 function getDBFilepath(req) {
   return path.resolve(os.tmpdir(), `rpdemo-${req.user.userid}`)

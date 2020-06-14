@@ -5,7 +5,7 @@ const os = require('os');
 const upload = require('multer')({ dest: os.tmpdir() });
 const { generateTextFile } = require('./txt-file');
 const discordWebhooks = require('./discord-webhooks');
-const { getContext: DB, initContext: initDB } = require('../server/context')
+const { getContext: DB, initContext: initDB } = require('./context')
 
 const config = {
   chatScrollback: 10,
