@@ -6,14 +6,13 @@ const upload = require('multer')({ dest: os.tmpdir() });
 const config = require('./config');
 const { getContext, initContext } = require('./context');
 
-const api = new express.Router();
-
 const dbFilepath = path.resolve(`${config.data}/db`);
 
-const addContext = (req, res, next) => {
-  req.ctx = getContext(dbFilepath);
-  next();
-}
+const api = new express.Router();
+
+api.get('/', (req, res) => {
+  res.redirect('/rp')
+})
 
 /**
  * Start new RP, or import from file
@@ -39,17 +38,23 @@ api.post('/setup', (req, res, next) => {
   }
 });
 
-const maybeRequireSetup = (req, res, next) => {
+/**
+ * If it's not set up, then respond with 204 to indicate this
+ */
+api.use((req, res, next) => {
   if (!getContext(dbFilepath)) {
     return res.sendStatus(204);
+  } else {
+    next();
   }
+});
+
+/**
+ * Add roomFile
+ */
+api.use((req, res, next) => {
+  req.roomFile = dbFilepath;
   next();
-}
-
-api.get('/', (req, res) => {
-  res.redirect('/rp')
-})
-
-api.use(maybeRequireSetup, addContext);
+});
 
 module.exports = api;

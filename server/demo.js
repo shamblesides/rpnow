@@ -3,19 +3,13 @@ const path = require('path');
 const os = require('os');
 const { getContext, initContext } = require('./context');
 
-const api = new express.Router();
-
 function getDBFilepath(req) {
   return path.resolve(os.tmpdir(), `rpdemo-${req.user.userid}`)
 }
 
-const addContext = (req, res, next) => {
-  const dbFilepath = getDBFilepath(req);
-  req.ctx = getContext(dbFilepath);
-  next();
-}
+const api = new express.Router();
 
-const populateRP = (req, res, next) => {
+api.use((req, res, next) => {
   const dbFilepath = getDBFilepath(req);
   if (!getContext(dbFilepath)) {
     const { setTitle, Msgs, Charas, Users } = initContext(dbFilepath);
@@ -45,8 +39,14 @@ const populateRP = (req, res, next) => {
     })
   }
   next();
-};
+});
 
-api.use('/rp', populateRP, addContext);
+/**
+ * Add roomFile
+ */
+api.use((req, res, next) => {
+  req.roomFile = getDBFilepath(req);
+  next();
+});
 
 module.exports = api;

@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { generateTextFile } = require('./txt-file');
 const discordWebhooks = require('./discord-webhooks');
+const { getContext: DB } = require('../server/context')
 
 const config = {
   chatScrollback: 10,
@@ -10,7 +11,7 @@ const config = {
 }
 
 // req.ctx should be set in a prior middleware
-const getContext = (req) => req.ctx;
+const getContext = (req) => DB(req.roomFile);
 
 const router = new express.Router();
 
