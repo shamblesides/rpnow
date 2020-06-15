@@ -14,9 +14,13 @@ api.post('/logout', (req, res, next) => {
   res.redirect('/');
 });
 
-/**
- * Catch UnauthorizedError and create demo session userid if we don't have one yet
- */
+const catchRevokedToken = (err, req, res, next) => {
+  if (err.code === 'revoked_token' || err.code === 'invalid_token') {
+    delete req.user;
+  }
+  next();
+}
+
 const autoAuth = (req, res, next) => {
   if (!req.user) {
     const credentials = Auth.demo.generateToken();
@@ -28,6 +32,6 @@ const autoAuth = (req, res, next) => {
   next();
 };
 
-api.use('/rp', cookieParser(), Auth.demo.middleware(), autoAuth);
+api.use('/rp', cookieParser(), Auth.demo.middleware(), catchRevokedToken, autoAuth);
 
 module.exports = api;
