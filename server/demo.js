@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const os = require('os');
 const { getContext, initContext } = require('../rp/context');
+const rp = require('../rp/rp');
 
 function getDBFilepath(req) {
   return path.resolve(os.tmpdir(), `rpdemo-${req.user.userid}`)
@@ -48,5 +49,7 @@ api.use((req, res, next) => {
   req.roomFile = getDBFilepath(req);
   next();
 });
+
+api.use(rp);
 
 module.exports = api;

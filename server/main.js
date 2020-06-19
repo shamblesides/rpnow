@@ -6,10 +6,10 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
-const rp = require('../rp/rp');
 const versionCheck = require('./version');
 const demoAPI = require('./demo');
 const singleAPI = require('./single');
+const multiAPI = require('./multi');
 const passcodeAuth = require('./passcode');
 const noAuth = require('./unsecured');
 
@@ -57,11 +57,11 @@ if (config.isDemoMode) {
 
 if (config.isDemoMode) {
   server.use(demoAPI);
+} else if (config.multi) {
+  server.use(multiAPI);
 } else {
   server.use(singleAPI);
 }
-
-server.use(rp)
 
 /**
  * Default route (route not found)
