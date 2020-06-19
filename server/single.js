@@ -6,10 +6,6 @@ const dbFilepath = path.resolve(`${config.data}/db`);
 
 const api = new express.Router();
 
-api.get('/', (req, res) => {
-  res.redirect('/rp')
-})
-
 /**
  * Add roomFile
  */

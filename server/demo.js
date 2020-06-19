@@ -9,10 +9,6 @@ function getDBFilepath(req) {
 
 const api = new express.Router();
 
-api.get('/', (req, res) => {
-  res.redirect('/rp')
-})
-
 api.use((req, res, next) => {
   const dbFilepath = getDBFilepath(req);
   if (!getContext(dbFilepath)) {

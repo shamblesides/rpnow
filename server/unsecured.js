@@ -32,6 +32,6 @@ const autoAuth = (req, res, next) => {
   next();
 };
 
-api.use('/rp', cookieParser(), Auth.demo.middleware(), catchRevokedToken, autoAuth);
+api.use(cookieParser(), Auth.demo.middleware(), catchRevokedToken, autoAuth);
 
 module.exports = api;

@@ -61,7 +61,7 @@ if (config.isDemoMode) {
   server.use(singleAPI);
 }
 
-server.use('/rp', rp)
+server.use(rp)
 
 /**
  * Default route (route not found)
