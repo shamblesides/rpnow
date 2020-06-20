@@ -5,7 +5,7 @@ const { getContext, initContext } = require('../rp/context');
 const rp = require('../rp/rp');
 
 function getDBFilepath(req) {
-  return path.resolve(os.tmpdir(), `rpdemo-${req.user.userid}`)
+  return path.resolve(os.tmpdir(), `rpdemo-${req.user.userid}.rprecord`)
 }
 
 const api = new express.Router();
