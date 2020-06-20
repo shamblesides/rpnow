@@ -20,23 +20,28 @@ api.use((req, res, next) => {
 })
 
 api.get('/', (req, res) => {
-  const rooms = fs.readdirSync(roomsDirectory);
-  const page = `
-  <ul>
-    ${rooms.map(room => {
-      const n = room.match(/\d+/)[0];
-      const fullPath = path.resolve(roomsDirectory, room);
-      const { getTitle } = getContext(fullPath);
-      // TODO XSS below
-      return `<li><a target="_blank" href="/rp/${n}">${getTitle()}</a></li>`
-    }).join('\n')}
-    <li><a href="/rp">New</a></li>
-  </ul>`
-  res.send(page);
+  res.sendFile(path.resolve(__dirname, './web/list.html'))
+});
+
+api.get('/rooms', (req, res) => {
+  if (!req.user) {
+    return res.sendStatus(401);
+  }
+  const files = fs.readdirSync(roomsDirectory);
+  const rooms = files.map(file => {
+    const id = file.match(/\w+/)[0];
+    const fullPath = path.resolve(roomsDirectory, file);
+    const ctx = getContext(fullPath);
+    const title = ctx.getTitle();
+    const lastMessage = ctx.Msgs.list({ reverse: true, limit: 1 })[0];
+    const date = lastMessage ? lastMessage.timestamp : null;
+    return { id, title, date };
+  });
+  res.json(rooms);
 });
 
 api.get('/rp', (req, res) => {
-  const newID = Math.random().toString().slice(2, 2+6);
+  const newID = Math.random().toString(36).slice(2, 2+6);
   res.redirect(301, `/rp/${newID}`);
 })
 
@@ -48,6 +53,6 @@ const routeToRoom = (req, res, next) => {
   next();
 };
 
-api.use('/rp/:code(\\d+)', routeToRoom, rp);
+api.use('/rp/:code(\\w+)', routeToRoom, rp);
 
 module.exports = api;
