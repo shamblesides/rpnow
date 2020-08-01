@@ -33,9 +33,10 @@ api.get('/rooms', (req, res) => {
     const fullPath = path.resolve(roomsDirectory, file);
     const ctx = getContext(fullPath);
     const title = ctx.getTitle();
-    const lastMessage = ctx.Msgs.list({ reverse: true, limit: 1 })[0];
-    const date = lastMessage ? lastMessage.timestamp : null;
+    const date = fs.statSync(fullPath).mtime;
     return { id, title, date };
+  }).sort((a,b) => {
+    return b.date - a.date;
   });
   res.json(rooms);
 });
