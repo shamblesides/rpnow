@@ -212,7 +212,7 @@ api.put('/msgs', express.json(), (req, res, next) => {
       discordWebhooks.send(webhooks, title, obj, chara);
     } catch (err) {
       // don't crash client response, just log it
-      console.info(err);
+      console.info(`webhook send error: ${err.message}`);
     }
   }
 });
