@@ -1,11 +1,4 @@
-body {
-  background-color: #fafafa;
-  color: black;
-  border-color: rgba(0,0,0,0.2);
-  margin: 0;
-  overflow-x: hidden;
-}
-textarea, button, input, select {
+textarea, button, input {
   font-size: inherit;
   font-family: inherit;
 }
@@ -18,8 +11,36 @@ button {
 form:invalid button[type="submit"], button:disabled {
   cursor: unset;
 }
+body {
+  margin: 0;
+  padding-top: 80px;
+  overflow-x: hidden;
+  background-color: #fafafa;
+  color: black;
+  border-color: rgba(0,0,0,0.2);
+}
+body.dark-theme {
+  background-color: #303030;
+  color: white;
+  border-color: rgba(255,255,255,0.2);
+}
+
 a {
   word-break: break-word;
+  text-decoration: none;
+  color: #7c4dff;
+  border-bottom: 1px dotted #7c4dff;
+}
+.dark-theme a {
+  color: #ffc107;
+  border-bottom-color: #ffc107;
+}
+a.button {
+  display: inline-block;
+  color: inherit;
+  border-bottom: unset;
+  text-align: center;
+  vertical-align: middle;
 }
 
 
@@ -40,6 +61,10 @@ form:invalid .text-button[type="submit"] {
 }
 .text-button:not(:last-of-type) {
   margin-right: 10px;
+}
+.dark-theme .text-button {
+  border-color: white;
+  color: white;
 }
 .text-button:hover:not(:disabled) {
   background-color: rgba(128,128,128,0.3);
@@ -88,21 +113,61 @@ data-page attribute from every element.
 }
 
 header {
-  border-bottom: solid 1px;
-  padding-top: 50px;
-  padding-bottom: 50px;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 64px;
+  padding: 0 4px;
+  background-color: inherit;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  box-shadow: 0 0 10px rgba(0,0,0,.1);
 }
-h1 {
-  font-size: 1.8em;
+.dark-theme > header {
+  box-shadow: 0 0 10px rgba(0,0,0,.4);
+}
+header h1, header h2 {
+  font-size: 24px;
+  flex-grow: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: center;
-  margin: 0;
+}
+header h1:first-child {
+  padding-left: 56px;
+}
+header h1:last-child {
+  padding-right: 56px;
+}
+header button, header a.button {
+  font-size: 32px;
+  height: 56px;
+  line-height: 56px;
+  width: 56px;
+  padding: 0;
+}
+@media (min-width: 1024px) {
+  body > header {
+    padding-right: 320px;
+  }
 }
 
 #pager {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  padding: 5px;
+  z-index: 29;
   text-align: center;
+  background-color: #eee;
+  box-shadow: 0 0 10px rgba(0,0,0,.1);
+}
+.dark-theme #pager {
+  background-color: #555;
 }
 #pager form {
   display: inline-block;
@@ -114,10 +179,10 @@ h1 {
 #pager a:not([href]) {
   visibility: hidden;
 }
-
-#settings {
-  text-align: center;
-  margin-top: 10px;
+@media (min-width: 1024px) {
+  #pager {
+    padding-right: 320px;
+  }
 }
 
 aside.error {
@@ -139,9 +204,8 @@ aside.error:empty {
 
 main {
   padding: 0 3% 0;
-  color: inherit;
-  background: inherit;
-  border-color: inherit;
+}
+#pager ~ main {
   padding-top: 40px;
 }
 
@@ -232,6 +296,11 @@ main {
   border-color: inherit;
   padding: 8px;
 }
+.dark-theme .message[data-who|=c] blockquote {
+  background-color: black;
+  color: white;
+  opacity: 0.6;
+}
 /** O O C **/
 .message[data-who=ooc] {
   padding: 4px 16px;
@@ -287,7 +356,7 @@ main {
 #send-box {
   position: fixed;
   bottom: 0;
-  left: 0; 
+  left: 0;
   right: 0;
   border: solid 1px;
   border-color: inherit;
@@ -366,6 +435,144 @@ main {
     box-sizing: content-box;
   }
 }
+#send-box.narrator .chara-name::before {
+  content: '📖 Narrator';
+}
+#send-box.ooc .chara-name::before {
+  content: '💬 Out of Character';
+}
+
+/***** DRAWERS, which are panels that pop in from the side of the page. For example, the character-selector drawer *****/
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  max-width: 320px;
+  width: 80%;
+  background-color: inherit;
+  z-index: 50;
+  transition: transform 0.2s cubic-bezier(.25,.8,.25,1);
+  padding-top: 64px;
+  transform: translate(0px, 0px);
+}
+@media (max-width: 400px) {
+  .drawer {
+    transition: transform 0.4s cubic-bezier(.25,.8,.25,1);
+  }
+}
+.drawer.drawer-right {
+  right: -320px;
+}
+.drawer.drawer-left {
+  left: -320px;
+}
+.drawer.open {
+  box-shadow: 0 8px 10px -5px rgba(0,0,0,.2), 0 16px 24px 2px rgba(0,0,0,.14), 0 6px 30px 5px rgba(0,0,0,.12);
+}
+.drawer.drawer-right.open {
+  transform: translate(-320px, 0px)
+}
+.drawer.drawer-left.open {
+  transform: translate(320px, 0px)
+}
+@media (min-width: 1024px) {
+  .drawer.drawer-dock-1024 {
+    box-shadow: unset;
+    z-index: 40;
+    transform: unset !important;
+    right: 0;
+  }
+  .drawer.drawer-dock-1024 .close-button {
+    display: none;
+  }
+  .drawer.drawer-dock-1024 header {
+    box-shadow: unset;
+    width: 320px;
+  }
+  .drawer.drawer-dock-1024.drawer-right ~ main {
+    margin-right: 320px;
+  }
+  .drawer.drawer-dock-1024.drawer-right ~ main {
+    margin-right: 320px;
+  }
+}
+
+.drawer-body {
+  padding-top: 8px;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.drawer-body > hr {
+  border: none;
+  border-top: solid 1px;
+  border-top-color: rgba(0,0,0,.12);
+  display: block;
+  margin: 10px 0;
+}
+.dark-theme .drawer-body > hr {
+  border-top-color: rgba(255,255,255,.12);
+}
+.drawer-body > :not(hr):not(div),
+.drawer-body > div > * {
+  /* reset */
+  background: none;
+  border: none;
+  text-align: left;
+  color: inherit;
+  text-decoration: none;
+  box-sizing: border-box;
+  /* styles */
+  width: 100%;
+  padding: 8px 40px 8px 20px;
+  cursor: pointer;
+  display: block;
+  position: relative;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  min-height: 40px;
+}
+.drawer-body form {
+  white-space: unset;
+  overflow: unset;
+  text-overflow: unset;
+  line-height: 2;
+}
+.drawer-body > details > summary::-webkit-details-marker {
+  display: none
+}
+.drawer-body > details[open] {
+  background-color: rgba(128,128,128,0.2);
+}
+.drawer-body > :not(hr):not(div):first-letter {
+  font-size: 22px;
+  letter-spacing: 8px;
+}
+.drawer-body > * > input[type="checkbox"] {
+  position: absolute;
+  right: 20px;
+  top: 14px;
+}
+.drawer-body :not(form) > button:last-child,
+.drawer header > button {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+.drawer-body > .selected {
+  box-shadow: inset 10px 0 5px -5px rgba(0, 0, 0, 0.5);
+}
+.dark-theme .drawer-body > .selected {
+  box-shadow: inset 10px 0 5px -5px rgba(255, 255, 255, 0.5);
+}
+.drawer-body p {
+  line-height: 1.6;
+  white-space: normal;
+}
 
 
 /***** DIALOG BOXES *****/
@@ -387,7 +594,10 @@ main {
 .dialog:not(.open) {
   top: -100vh;
 }
-.dialog-overlay {
+
+
+/***** OVERLAYS, which cover and darkens the rest of the UI when a dialog/drawer is open *****/
+.overlay {
   display: none;
   position: fixed;
   background-color: rgba(0,0,0, 0.6);
@@ -396,11 +606,34 @@ main {
   right: 0;
   left: 0;
 }
-.dialog.open ~ .dialog-overlay {
+@media (max-width: 1023px) {
+  .drawer.open ~ .overlay.drawer-overlay {
+    z-index: 49;
+    display: unset;
+  }
+}
+@media (min-width: 1024px) {
+  .drawer:not(.drawer-dock-1024).open ~ .overlay.drawer-overlay {
+    z-index: 49;
+    display: unset;
+  }
+}
+.dialog.open ~ .overlay.dialog-overlay {
   z-index: 59;
   display: unset;
 }
+.dark-theme .overlay {
+  background-color: rgba(189,189,189,.6);
+}
 
+/***** CHARA DRAWER specific styles *****/
+.chara-row.editing {
+  background-color: rgba(128,128,128,0.2);
+}
+.chara-row.editing > label,
+.chara-row:not(.editing) > form {
+  display: none;
+}
 
 /***** Image dialog specific styles *****/
 #image-dialog h3 {
