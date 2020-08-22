@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RPNow</title>
+  <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js"></script>
+</head>
+
+<body>
+  <div id="loading-view">Loading...</div>
+
+  <div id="auth-view">
+    <h1>Login</h1>
+    <form id="login-form">
+      <input name="username" type="text" required placeholder="Username">
+      <input name="password" type="password" required placeholder="Password">
+      <input type="submit" value="Sign in">
+    </form>
+    <div id="login-error"></div>
+
+    <h1>Create an account</h1>
+    <form id="signup-form">
+      <input id="signup-username" type="text" required placeholder="Username">
+      <input id="signup-password" type="password" required placeholder="Password">
+      <input type="submit" value="Create an account">
+    </form>
+    <div id="signup-error"></div>
+  </div>
+
+  <div id="dashboard-view">
+    <div id="username"></div>
+    <input type="button" value="Logout" id="logout-button">
+    <div id="logout-error"></div>
+
+    <h1>Dashboard</h1>
+    <ul id="rp-list"></ul>
+    <div id="db-loading">Loading RP list...</div>
+    <div id="db-error"></div>
+  </div>
+
+  <!-- application code -->
+  <script type="text/javascript">
+    var loadingView = document.getElementById('loading-view');
+    var dashboardView = document.getElementById('dashboard-view')
+    var authView = document.getElementById('auth-view');
+
+    dashboardView.style.display = 'none'
+    authView.style.display = 'none'
+
+    userbase.init({ appId: '8dcdb794-f6c1-488d-966d-0058b5889c93' })
+    .then(function (session) {
+      loadingView.style.display = 'none';
+      if (session.user) {
+        showDashboard(session.user);
+      } else {
+        authView.style.display = '';
+      }
+    })
+
+    document.getElementById('login-form').addEventListener('submit', handleLogin.bind(null, 'signIn'))
+    document.getElementById('signup-form').addEventListener('submit', handleLogin.bind(null, 'signUp'))
+
+    function handleLogin(method, e) {
+      e.preventDefault()
+
+      var form = e.target;
+      var errorText = form.nextElementSibling;
+      errorText.innerText = '';
+
+      const username = form.elements.username.value;
+      const password = form.elements.password.value;
+
+      userbase[method]({ username, password, rememberMe: 'local' })
+        .then(showDashboard)
+        .catch(function (err) { errorText.innerText = err })
+    }
+
+    function showDashboard(user) {
+      document.getElementById('auth-view').style.display = 'none'
+      document.getElementById('dashboard-view').style.display = ''
+
+      document.getElementById('username').innerText = user.username
+      document.getElementById('rp-list').innerText = ''
+      document.getElementById('db-loading').style.display = 'block'
+      document.getElementById('db-error').innerText = ''
+
+      userbase.getDatabases()
+        .then(function (results) {
+          results.databases.forEach(function (databaseMeta) {
+            var li = document.createElement('li');
+            var a = document.createElement('a');
+            a.innerText = JSON.stringify(databaseMeta);
+            a.href = `/rp.html?room=${databaseMeta.databaseName}`;
+            li.appendChild(a);
+            document.getElementById('rp-list').appendChild(li);
+          })
+          document.getElementById('db-loading').style.display = 'none';
+          console.log(results);
+        })
+        .catch(function (err) {
+          document.getElementById('db-error').innerText = err
+        })
+    }
+  </script>
+</body>
+</html>
