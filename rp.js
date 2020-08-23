@@ -1,5 +1,7 @@
 window.RP = (function() {
   var exports = {};
+
+  var dbArgs;
   
   function alertError(err) {
     alert(err);
@@ -26,6 +28,10 @@ window.RP = (function() {
     var onpagecount = callbacks.pageCount;
     var onerror = callbacks.error;
 
+    dbArgs = (roomid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i))
+      ? { databaseId: roomid }
+      : { databaseName: roomid };
+
     userbase.init({ appId: '8dcdb794-f6c1-488d-966d-0058b5889c93' })
     .then(function () {
       var isFirstUpdate = true;
@@ -37,8 +43,7 @@ window.RP = (function() {
       // them soooo
       var previousObjectReferences = new Map();
 
-      userbase.openDatabase({
-        databaseName: roomid,
+      userbase.openDatabase(Object.assign({
         changeHandler(changes) {
           try {
             changes.forEach(function (change) {
@@ -65,15 +70,14 @@ window.RP = (function() {
             onerror(err);
           }
         }
-      })
+      }, dbArgs))
       .then(function() {
         // connected!
         if (!previousObjectReferences.has('title')) {
-          userbase.insertItem({
-            databaseName: roomid,
+          userbase.insertItem(Object.assign({
             itemId: 'title',
             item: 'Untitled',
-          })
+          }, dbArgs))
         }
       })
       .catch(function (err) {
@@ -94,13 +98,10 @@ window.RP = (function() {
 
     var method = isUpdate ? 'updateItem' : 'insertItem';
 
-    var params = {
-      databaseName: roomid,
+    userbase[method](Object.assign({
       itemId: itemId,
       item: item,
-    }
-
-    userbase[method](params)
+    }, dbArgs))
     .catch(alertError)
     .then(callback.bind(null, data))
   }
@@ -114,11 +115,10 @@ window.RP = (function() {
   }
 
   exports.changeTitle = function changeTitle(title) {
-    userbase.updateItem({
-      databaseName: roomid,
+    userbase.updateItem(Object.assign({
       itemId: 'title',
       item: title,
-    })
+    }, dbArgs))
     .catch(alertError)
   }
 
@@ -133,6 +133,44 @@ window.RP = (function() {
     var cookieMatch = document.cookie.match('(^|[^;]+)\\s*' + cookieName + '\\s*=\\s*([^;]+)');
     return cookieMatch ? cookieMatch.pop() : '';
   } });
+
+  exports.inviteUser = function inviteUser(username) {
+    var shareDatabaseParams = Object.assign({
+      username: username,
+      readOnly: false,
+    }, dbArgs);
+
+    userbase.shareDatabase(shareDatabaseParams)
+    .then(function () {
+      alert('Invite successful')
+    })
+    .catch(function (err) {
+      if (err.name !== 'UserNotVerified') {
+        throw err;
+      }
+      var code = prompt(`You've never invited ${username} to an RP before! Please ask for their verification code to make sure it's them.`);
+      if (code == null) {
+        return;
+      }
+      return userbase.verifyUser({ verificationMessage: code })
+      .then(function () {
+        return user.shareDatabase(shareDatabaseParams)
+        .then(function () {
+          alert('Invite successful')
+        })
+        .catch(function (err) {
+          if (err.name === 'UserNotVerified') {
+            throw new Error(`Invite failed: This code does not belong to ${username}!`);
+          } else {
+            throw new Error(`Successfully verified user, but invite failed: ${err.message}`);
+          }
+        })
+      })
+    })
+    .catch(function (err) {
+      alert(err.message);
+    })
+  }
   
   return exports;
   

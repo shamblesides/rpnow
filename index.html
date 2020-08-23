@@ -97,7 +97,7 @@
             var li = document.createElement('li');
             var a = document.createElement('a');
             a.innerText = JSON.stringify(databaseMeta);
-            a.href = `/rp.html?room=${databaseMeta.databaseName}`;
+            a.href = `/rp.html?room=${databaseMeta.databaseId || databaseMeta.databaseName}`;
             li.appendChild(a);
             document.getElementById('rp-list').appendChild(li);
           })
