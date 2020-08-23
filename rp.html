@@ -327,7 +327,9 @@
       }
       RP.sendMessage(args, function() {
         event.target.querySelector('[name=content]').value = '';
-        try { localStorage.removeItem('rpsettings.sendBoxText') } catch (err) {}
+        try {
+          localStorage.removeItem(`rpsettings.${roomid}.sendBoxText`)
+        } catch (err) {}
       });
     }
     function sendEditedMessage(event) {
