@@ -113,12 +113,6 @@ window.RP = (function() {
     upsert('c-', data, callback);
   }
 
-  exports.getMessageHistory = function getMessageHistory(_id, callback) {
-    return request('GET', `api/msgs/${_id}/history`)
-    .catch(alertError)
-    .then(callback)
-  }
-
   exports.changeTitle = function changeTitle(title) {
     userbase.updateItem({
       databaseName: roomid,
@@ -128,27 +122,10 @@ window.RP = (function() {
     .catch(alertError)
   }
 
-  exports.changeMyUsername = function changeMyUsername(name, callback) {
-    return requestWithJSON('PUT', 'api/username', { name: name })
-    .catch(alertError)
-    .then(callback)
-  }
-
   exports.addWebhook = function addWebhook(webhook, callback) {
     return requestWithJSON('PUT', 'api/webhook', { webhook: webhook })
     .catch(alertError)
     .then(callback)
-  }
-  
-  exports.checkForUpdates = function checkForUpdates() {
-    return request('GET', '/version')
-    .then(function (versions) {
-      if (versions.current === versions.latest) {
-        return new Promise(function() {}); // never return
-      } else {
-        return versions;
-      }
-    })
   }
   
   Object.defineProperty(exports, 'myUserID', { get: function() {
