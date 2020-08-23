@@ -382,6 +382,11 @@ main {
     overflow: hidden;
   }
 }
+@media (min-width: 1024px) {
+  #send-box {
+    right: 320px;
+  }
+}
 #send-box .change-chara {
   display: block;
   height: 40px;
