@@ -88,7 +88,7 @@ window.RP = (function() {
     })
   }
 
-  function upsert(collection, data, callback) {
+  function upsert(collection, data, callback, failCallback) {
     var isUpdate = !!data._id;
 
     var itemId = data._id || ID(collection);
@@ -102,12 +102,15 @@ window.RP = (function() {
       itemId: itemId,
       item: item,
     }, dbArgs))
-    .catch(alertError)
+    .catch(function (err) {
+      if (failCallback) failCallback(err);
+      return alertError(err);
+    })
     .then(callback.bind(null, data))
   }
 
-  exports.sendMessage = function sendMessage(data, callback) {
-    upsert('m-', data, callback);
+  exports.sendMessage = function sendMessage(data, callback, failCallback) {
+    upsert('m-', data, callback, failCallback);
   }
 
   exports.sendChara = function sendChara(data, callback) {

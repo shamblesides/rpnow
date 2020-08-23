@@ -427,7 +427,8 @@ main {
   color: black;
   background-color: transparent;
 }
-#send-box textarea:placeholder-shown ~ button[type="submit"] {
+#send-box textarea:placeholder-shown ~ button[type="submit"],
+#send-box button[type="submit"]:disabled {
   opacity: 0.26;
 }
 @media (min-width: 720px) {

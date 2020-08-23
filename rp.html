@@ -32,7 +32,7 @@
     <button type="button" class="change-chara chara-name" onclick="openPopup('character-menu')"></button>
     <button type="button" class="icon-button" onclick="openPopup('image-dialog')">🖼️</button>
     <textarea name="content" rows="3" maxlength="10000" placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist-room="sendBoxText"></textarea>
-    <button type="submit">➤</button>
+    <button type="submit" name="submit">➤</button>
   </form>
   
   <form id="image-dialog" class="dialog" oninput="this.querySelector('img').src=(this.checkValidity() ? url.value : '')" onreset="this.querySelector('img').src=''" onsubmit="sendImage(event)" data-page="chat">
@@ -328,11 +328,15 @@
           args.content = newContent;
         }
       }
+      event.target.elements.submit.disabled = true;
       RP.sendMessage(args, function() {
+        event.target.elements.submit.disabled = false;
         event.target.querySelector('[name=content]').value = '';
         try {
           localStorage.removeItem(`rpsettings.${roomid}.sendBoxText`)
         } catch (err) {}
+      }, function () {
+        event.target.elements.submit.disabled = false;
       });
     }
     function sendEditedMessage(event) {
