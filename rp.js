@@ -1,143 +1,116 @@
 window.RP = (function() {
   var exports = {};
   
-  function isOK(xhr) {
-    // "ok" responses have a status code that is 200 - 299
-    var firstDigit = Math.floor(xhr.status / 100);
-    return firstDigit === 2;
-  }
-  
   function alertError(err) {
     alert(err);
     throw err;
   }
-  
-  function xhrPromiseResult(resolve, reject) {
-    if (isOK(this)) {
-      resolve(this.response)
-    } else if (this.status > 0) {
-      var details;
-      if (typeof this.response === 'object') {
-        details = this.response.error || JSON.stringify(details);
-      } else if (typeof this.response === 'string') {
-        try {
-          details = JSON.parse(this.response).error || this.response;
-        } catch (err) {
-          details = this.response;
-        }
-      } else {
-        details = this.response;
-      }
-      var err = new Error(`${this.status} ${this.statusText} - ${details}`);
-      err.status = this.status;
-      reject(err);
-    } else {
-      reject(new Error('Connection error'));
-    }
-  }
-  
-  function request(method, url, body, contentType) {
-    return new Promise(function (resolve, reject) {
-      var xhr = new XMLHttpRequest();
-      xhr.onloadend = xhrPromiseResult.bind(xhr, resolve, reject);
-      xhr.open(method, url);
-      xhr.responseType = 'json';
-      if (contentType) {
-        xhr.setRequestHeader('Content-Type', contentType);
-      }
-      if (body) {
-        xhr.send(body);
-      } else {
-        xhr.send();
-      }
-    });
-  }
-  
-  function requestWithJSON(method, url, bodyObject) {
-    return request(method, url, JSON.stringify(bodyObject), 'application/json');
-  }
 
-  function jsonStream(url, cb) {
-    var xhr = new XMLHttpRequest();
-    
-    var readFrom = 0;
-    
-    xhr.onprogress = function() {
-      if (this.status !== 200) return;
-      
-      var idx;
-      while (((idx = this.response.indexOf('\n', readFrom))) !== -1) {
-        var json = this.response.substring(readFrom, idx);
-        var obj = JSON.parse(json);
-        cb(obj);
-        readFrom = idx+1;
-      }
+  var ID = (function() {
+    var counter = 0;
+    return function ID(prefix) {
+      prefix = prefix || '';
+      var date = Date.now().toString(36).padStart(9, 0);
+      var num = (counter++ % 36**6).toString(36).padStart(6,0)
+      var rand = Math.random().toString(36).slice(2);
+      return prefix + date + num + rand;
     }
-    
-    return new Promise(function(resolve, reject) {
-      xhr.onloadend = xhrPromiseResult.bind(xhr, resolve, reject);
-      xhr.open('GET', url);
-      xhr.send();
-    }).then(function() {
-      return xhr;
-    })
-  }
+  }());
 
-  exports.initialize = function initialize(page, callbacks) {
-    var retry = initialize.bind(null, page, callbacks);
-    
-    var oninit = callbacks.init;
+  exports.initialize = function initialize(roomid, page, callbacks) {
+    var onready = callbacks.ready;
     var onmsg = callbacks.msg;
     var onchara = callbacks.chara;
     var ontitle = callbacks.title;
     var onuser = callbacks.user;
+    var onpagecount = callbacks.pageCount;
     var onerror = callbacks.error;
-    
-    jsonStream(`api?page=${page}`, function(update) {
-      if (update.type === 'init') {
-        oninit(update.data);
-      } else if (update.type === 'title') {
-        ontitle(update.data);
-      } else if (update.type === 'msgs') {
-        onmsg(update.data);
-      } else if (update.type === 'charas') {
-        onchara(update.data);
-      } else if (update.type === 'users') {
-        onuser(update.data);
-      }
-    })
-    .then(function (xhr) {
-      if (xhr.status === 204) { // No content
-        history.replaceState(null, '', location.pathname + '/setup.html');
-        location.reload();
-      } else {
-        // This stream isn't supposed to complete. If it does, that means that
-        // the request has terminated for some reason. So, throw an error.
-        throw new Error('Lost connection! Trying to reconnect...');
-      }
-    })
-    .catch(function (err) {
-      if (err.status === 401) { // Not logged in
-        window.location.replace('/auth');
-      } else if (err.status) { // Server responded, but with some other error
+
+    userbase.init({ appId: '8dcdb794-f6c1-488d-966d-0058b5889c93' })
+    .then(function () {
+      var isFirstUpdate = true;
+      // TODO: hopefully at some point, the API for Userbase will change
+      // so that we get notified of the exact changes, rather than having
+      // to figure them out ourselves. At that point, we probably won't
+      // need this Map anymore
+      // Also if we ever implement Deletes then this will fail to notice
+      // them soooo
+      var previousObjectReferences = new Map();
+
+      userbase.openDatabase({
+        databaseName: roomid,
+        changeHandler(changes) {
+          try {
+            changes.forEach(function (change) {
+              if (previousObjectReferences.get(change.itemId) === change.item) {
+                return;
+              }
+              if (change.itemId === 'title') {
+                ontitle(change.item);
+              } else if (change.itemId.startsWith('m-')) {
+                var obj = Object.assign({ _id: change.itemId }, change.item);
+                onmsg(obj, isFirstUpdate);
+              } else if (change.itemId.startsWith('c-')) {
+                var obj = Object.assign({ _id: change.itemId }, change.item);
+                onchara(obj, isFirstUpdate);
+              }
+              previousObjectReferences.set(change.itemId, change.item);
+            })
+            if (isFirstUpdate) {
+              onpagecount(changes.filter(c => c.itemId.startsWith('m-')).length || 1);
+              onready(isFirstUpdate);
+              isFirstUpdate = false;
+            }
+          } catch (err) {
+            onerror(err);
+          }
+        }
+      })
+      .then(function() {
+        // connected!
+        if (!previousObjectReferences.has('title')) {
+          userbase.insertItem({
+            databaseName: roomid,
+            itemId: 'title',
+            item: 'Untitled',
+          })
+        }
+      })
+      .catch(function (err) {
+        // window.location.replace('/auth');
         onerror(err);
-      } else { // Connection error. We will retry
-        onerror(err, true);
-        setTimeout(retry, 6000);
-      }
+        // onerror(err, true);
+      })
     })
+  }
+
+  function upsert(collection, data, callback) {
+    var isUpdate = !!data._id;
+
+    var itemId = data._id || ID(collection);
+
+    var item = Object.assign({}, data);
+    delete item._id;
+
+    var method = isUpdate ? 'updateItem' : 'insertItem';
+
+    var params = {
+      databaseName: roomid,
+      itemId: itemId,
+      item: item,
+    }
+
+    userbase[method](params)
+    .catch(alertError)
+    .then(callback.bind(null, data))
   }
 
   exports.sendMessage = function sendMessage(data, callback) {
-    return requestWithJSON('PUT', 'api/msgs', data)
-    .catch(alertError)
-    .then(callback)
+    upsert('m-', data, callback);
   }
 
   exports.sendChara = function sendChara(data, callback) {
-    return requestWithJSON('PUT', 'api/charas', data)
-    .catch(alertError)
-    .then(callback)
+    upsert('c-', data, callback);
   }
 
   exports.getMessageHistory = function getMessageHistory(_id, callback) {
@@ -146,10 +119,13 @@ window.RP = (function() {
     .then(callback)
   }
 
-  exports.changeTitle = function changeTitle(title, callback) {
-    return requestWithJSON('PUT', 'api/title', { title: title })
+  exports.changeTitle = function changeTitle(title) {
+    userbase.updateItem({
+      databaseName: roomid,
+      itemId: 'title',
+      item: title,
+    })
     .catch(alertError)
-    .then(callback)
   }
 
   exports.changeMyUsername = function changeMyUsername(name, callback) {

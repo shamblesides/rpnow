@@ -21,6 +21,7 @@
   <nav id="pager">
     <a class="icon-button" id="prev-page">←</a>
     <form>
+      <input type="hidden" name="room">
       <select name="page" onchange="this.closest('form').submit()"></select>
     </form>
     <a class="icon-button" id="next-page">→</a>
@@ -380,6 +381,7 @@
     location.search.substr(1).split("&").forEach(function(x) { x=x.split('='); query[x[0]] = decodeURIComponent(x[1]) });
 
     var roomid = query['room'];
+    document.querySelector('input[type=hidden][name=room]').value = roomid;
     
     var pagenum = parseInt(query['page']) || 0;
     if (pagenum) {
@@ -454,6 +456,7 @@
     }).bind(null, 0));
   </script>
 
+  <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js"></script>
   <script src="rp.js"></script>
   <script src="format-rp-message.js"></script>
 
@@ -546,69 +549,59 @@
     function addTo(el, container, before) {
       var oldEl = document.getElementById(el.id)
       if (oldEl) {
-        if (el.dataset.rev && oldEl.dataset.rev == el.dataset.rev) {
+        // if (el.dataset.rev && oldEl.dataset.rev == el.dataset.rev) {
           // then just ignore the new element, it should be exactly the same
-        } else {
+        // } else {
           container.replaceChild(el, oldEl);
-        }
+        // }
       } else {
         container.insertBefore(el, before || null); // if "before" is null, then this is the end
       }
       return oldEl;
     }
-    RP.initialize(pagenum || 0, {
-      init(data) {
-        setError(null);
-        document.title = data.title;
-        document.getElementById('title').innerText = data.title;
-        document.getElementById('my-user-name').dataset.userid = RP.myUserID;
-        for (var user of data.users) {
-          var style = userStyles(user);
-          addTo(style, document.head);
-        }
-        for (var ch of data.charas) {
-          var style = charaStyles(ch);
-          addTo(style, document.head);
+    function updatePageCount(pageCount) {
+      var select = document.querySelector('#pager select[name=page]');
+      var chatOptionEl;
+      if (select.childElementCount === 0) {
+        chatOptionEl = document.createElement('option');
+        chatOptionEl.value = 0;
+        chatOptionEl.innerText = 'Chat';
+        document.querySelector('#pager select').appendChild(chatOptionEl);
+      } else {
+        chatOptionEl = select.lastElementChild;
+      }
 
-          var menu = document.querySelector('#character-menu .drawer-body');
-          if (menu) {
-            var el = buildCharaButton(ch);
-            addTo(el, menu, menu.querySelector('#new-chara'));
-          }
-        }
-        for (var msg of data.msgs) {
-          var main = document.querySelector('main');
-          var el = buildMessageElement(msg);
-          addTo(el, main);
-        }
-        
-        for (var i = 1; i <= data.pageCount; ++i) {
-          var optionEl = document.createElement('option');
-          optionEl.value = i;
-          optionEl.innerText = `Page ${i}`;
-          document.querySelector('#pager select').appendChild(optionEl);
-        }
+      for (var i = select.childElementCount; i <= pageCount; ++i) {
         var optionEl = document.createElement('option');
-        optionEl.value = 0;
-        optionEl.innerText = 'Chat';
-        document.querySelector('#pager select').appendChild(optionEl);
+        optionEl.value = i;
+        optionEl.innerText = `Page ${i}`;
+        select.insertBefore(optionEl, chatOptionEl);
+      }
 
-        document.querySelector('#pager [name=page]').value = pagenum;
-        
-        if (pagenum === 0) {
-          document.querySelector('#pager #prev-page').href = `?page=${data.pageCount}`;
-        } else if (pagenum != 1) {
-          document.querySelector('#pager #prev-page').href = `?page=${pagenum-1}`;
-        }
-        if (pagenum === data.pageCount) {
-          document.querySelector('#pager #next-page').href = `?page=${0}`;
-        } else if (pagenum != 0) {
-          document.querySelector('#pager #next-page').href = `?page=${pagenum+1}`;
-        }
-        var loadingMsg = document.getElementById('loading-messages');
-        if (loadingMsg) {
+      select.value = pagenum;
+      
+      if (pagenum === 0) {
+        document.querySelector('#pager #prev-page').href = `?room=${roomid}&page=${pageCount}`;
+      } else if (pagenum != 1) {
+        document.querySelector('#pager #prev-page').href = `?room=${roomid}&page=${pagenum-1}`;
+      }
+      if (pagenum === pageCount) {
+        document.querySelector('#pager #next-page').href = `?room=${roomid}&page=${0}`;
+      } else if (pagenum != 0) {
+        document.querySelector('#pager #next-page').href = `?room=${roomid}&page=${pagenum+1}`;
+      }
+    }
+    RP.initialize(roomid, pagenum || 0, {
+      ready(isFirstUpdate) {
+        setError(null);
+        if (isFirstUpdate) {
+          // document.getElementById('my-user-name').dataset.userid = RP.myUserID;
+          var loadingMsg = document.getElementById('loading-messages');
           loadingMsg.remove();
         }
+      },
+      pageCount(pageCount) {
+        updatePageCount(pageCount);
       },
       title(title) {
         document.title = title;
@@ -631,7 +624,7 @@
           }
         }
       },
-      msg(data) {
+      msg(data, isInit) {
         var wasAtBottom =
             document.documentElement.offsetHeight -
             Math.ceil(window.innerHeight + window.scrollY) < 31;
@@ -640,7 +633,7 @@
         var el = buildMessageElement(data);
         var oldEl = addTo(el, main);
         
-        if (!oldEl) {
+        if (!isInit && !oldEl) {
           if (!pagenum) {
             // only keep 10 msgs
             while (main.childNodes.length > 10) {
