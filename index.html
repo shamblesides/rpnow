@@ -226,8 +226,35 @@
     }
 
     function createRP() {
+      dashboardView.style.display = 'none';
+      loadingView.style.display = '';
+
       var rpid = `rp-${Date.now().toString(36)}`;
-      window.location.href = `/rp.html?room=${rpid}`;
+
+      var isEmpty = null;
+      userbase.openDatabase({
+        databaseName: rpid,
+        changeHandler(items) {
+          isEmpty = (items.length === 0);
+        }
+      })
+      .then(function () {
+        if (isEmpty !== true) {
+          throw new Error(`Failed to create RP: hasItems === ${isEmpty}`);
+        }
+        return userbase.insertItem({
+          databaseName: rpid,
+          itemId: 'title',
+          item: 'Untitled',
+        });
+      })
+      .then(function () {
+        window.location.href = `/rp.html?room=${rpid}`;
+      })
+      .catch(function (err) {
+        alert(err.message);
+        throw err;
+      })
     }
 
     function showVerificationCode() {

@@ -34,6 +34,17 @@ window.RP = (function() {
 
     userbase.init({ appId: '8dcdb794-f6c1-488d-966d-0058b5889c93' })
     .then(function () {
+      return userbase.getDatabases()
+    })
+    .then(function (results) {
+      var found = !!results.databases.find(function(db) {
+        return (dbArgs.databaseId && dbArgs.databaseId === db.databaseId)
+            || (dbArgs.databaseName && dbArgs.databaseName === db.databaseName)
+      })
+      if (!found) {
+        throw new Error('RP Not Found');
+      }
+
       var isFirstUpdate = true;
       // TODO: hopefully at some point, the API for Userbase will change
       // so that we get notified of the exact changes, rather than having
@@ -43,7 +54,7 @@ window.RP = (function() {
       // them soooo
       var previousObjectReferences = new Map();
 
-      userbase.openDatabase(Object.assign({
+      return userbase.openDatabase(Object.assign({
         changeHandler(changes) {
           try {
             changes.forEach(function (change) {
@@ -71,20 +82,11 @@ window.RP = (function() {
           }
         }
       }, dbArgs))
-      .then(function() {
-        // connected!
-        if (!previousObjectReferences.has('title')) {
-          userbase.insertItem(Object.assign({
-            itemId: 'title',
-            item: 'Untitled',
-          }, dbArgs))
-        }
-      })
-      .catch(function (err) {
-        // window.location.replace('/auth');
-        onerror(err);
-        // onerror(err, true);
-      })
+    })
+    .catch(function (err) {
+      // window.location.replace('/auth');
+      onerror(err);
+      // onerror(err, true);
     })
   }
 
