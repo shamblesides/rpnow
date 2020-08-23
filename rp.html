@@ -30,7 +30,7 @@
     <input type="hidden" name="type" value="text">
     <button type="button" class="change-chara chara-name" onclick="openPopup('character-menu')"></button>
     <button type="button" class="icon-button" onclick="openPopup('image-dialog')">🖼️</button>
-    <textarea name="content" rows="3" maxlength="10000" placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist="sendBoxText"></textarea>
+    <textarea name="content" rows="3" maxlength="10000" placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist-room="sendBoxText"></textarea>
     <button type="submit">➤</button>
   </form>
   
@@ -378,6 +378,8 @@
   <script>
     var query = {};
     location.search.substr(1).split("&").forEach(function(x) { x=x.split('='); query[x[0]] = decodeURIComponent(x[1]) });
+
+    var roomid = query['room'];
     
     var pagenum = parseInt(query['page']) || 0;
     if (pagenum) {
@@ -402,9 +404,13 @@
   </script>
 
   <script>
-    Array.from(document.querySelectorAll('[data-persist]'))
+    Array.from(document.querySelectorAll('[data-persist],[data-persist-room]'))
     .forEach(function (input) {
-      var storageKey = 'rpsettings.' + input.dataset.persist;
+      if (input.dataset.persistRoom) {
+        var storageKey = 'rpsettings.' + roomid + '.' + input.dataset.persistRoom;
+      } else {
+        var storageKey = 'rpsettings.' + input.dataset.persist;
+      }
       var inputProp = (input.type === 'checkbox') ? 'checked' : 'value';
       function onchange() {
         localStorage.setItem(storageKey, input[inputProp]);
