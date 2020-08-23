@@ -307,6 +307,9 @@
         who: event.target.elements.who.value,
         content: event.target.elements.content.value,
       }
+      if (args.content.length === 0) {
+        return;
+      }
       // this will modify args if we are using an OOC shortcut
       if (args.who !== 'ooc') {
         var newContent = [
