@@ -2,7 +2,6 @@ Basic Prototype
 ===============
 
 * Pagination
-* Dashboard RP titles
 * Manage participants
 * Manage webhooks
 * Download TXT

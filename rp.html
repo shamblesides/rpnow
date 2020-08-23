@@ -621,6 +621,7 @@
       title(title) {
         document.title = title;
         document.getElementById('title').innerText = title;
+        try { localStorage.setItem('rptitles.'+roomid, title); } catch (e) {}
       },
       user(data) {
         var style = userStyles(data);

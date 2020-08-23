@@ -185,7 +185,13 @@
           results.databases.forEach(function (databaseMeta) {
             var el = template.content.cloneNode(true).querySelector('*');
             el.href = `/rp.html?room=${databaseMeta.databaseId || databaseMeta.databaseName}`;
-            el.querySelector('h3').innerText = databaseMeta.databaseName.slice(3);
+            var h3 = el.querySelector('h3');
+            try {
+              h3.innerText = localStorage.getItem('rptitles.' + (databaseMeta.databaseId || databaseMeta.databaseName)) || '';
+            } catch (err) {}
+            if (!h3.innerText) {
+              h3.innerText = `RP #${databaseMeta.databaseId || databaseMeta.databaseName}`
+            }
             var ul = el.querySelector('.participants-list')
             if (databaseMeta.isOwner) {
               var li = document.createElement('li');
