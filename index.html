@@ -1,15 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>RPNow</title>
-  <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js"></script>
+  <style>
+    body {
+      max-width: 700px;
+      margin: 20px auto;
+      box-sizing: border-box;
+    }
+    .pane {
+      display: inline-block;
+      border: solid 1px rgba(0,0,0,0.5);
+      background: none;
+      font-size: inherit;
+      font-family: inherit;
+      cursor: pointer;
+      margin: 0 5px 10px;
+      text-decoration: none;
+      color: inherit;
+      box-sizing: border-box;
+      border-radius: 10px;
+      overflow: hidden;
+      word-break: break-all;
+    }
+    .pane.button {
+      height: 60px;
+      width: 290px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .pane.rp {
+      display: inline-flex;
+      flex-direction: column;
+      min-height: 140px;
+      width: 290px;
+    }
+    .pane.rp header {
+      padding: 10px;
+      margin: 0;
+      position: relative;
+      background-color: aquamarine;
+    }
+    .pane.rp header h3 {
+      margin: 0;
+    }
+  </style>
 </head>
 
 <body>
   <div id="loading-view">Loading...</div>
 
-  <div id="auth-view">
+  <div id="auth-view" style="display:none">
     <h1>Login</h1>
     <form id="login-form">
       <input name="username" type="text" required placeholder="Username">
@@ -27,32 +71,57 @@
     <div id="signup-error"></div>
   </div>
 
-  <div id="dashboard-view">
+  <div id="dashboard-view" style="display:none">
     <div id="username"></div>
-    <input type="button" value="Logout" id="logout-button">
+    <button type="button" onclick="handleLogout()">Logout</button>
     <div id="logout-error"></div>
 
-    <h1>Dashboard</h1>
-    <ul id="rp-list"></ul>
-    <div id="db-loading">Loading RP list...</div>
-    <div id="db-error"></div>
+    <h1>Create new RP</h1>
+    <a class="pane button">
+      Create New RP
+    </a>
 
-    <h2>Join RP</h2>
+    <h1>Join RP</h1>
     <p>
       Ask the RP creator to invite you to join.
-      You will have to provide a verification code.
     </p>
-    <button onclick="showVerificationCode()">Get Verification Code</button>
+    <p>
+      If it's the first time that person is inviting you to an RP,
+      you will have to send them a verification code:
+    </p>
+    <button onclick="showVerificationCode()" class="pane button">Get Verification Code</button>
+    <p>
+      Once completed, you can simply refresh your page
+      and the RP will be here.
+    </p>
+
+    <h1>My RPs</h1>
+    <div id="rp-list"></div>
+    <div id="db-loading">Loading RP list...</div>
+    <div id="db-error"></div>
   </div>
 
+  <template id="tile-template">
+    <a class="pane rp">
+      <section>
+        <header>
+          <h3></h3>
+        </header>
+        <ul class="participants-list"></ul>
+      </section>
+      </div>
+      <div class="rp-info">
+
+      </div>
+    </router-link>
+  </template>
+
   <!-- application code -->
+  <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js"></script>
   <script type="text/javascript">
     var loadingView = document.getElementById('loading-view');
     var dashboardView = document.getElementById('dashboard-view')
     var authView = document.getElementById('auth-view');
-
-    dashboardView.style.display = 'none'
-    authView.style.display = 'none'
 
     userbase.init({ appId: '8dcdb794-f6c1-488d-966d-0058b5889c93' })
     .then(function (session) {
@@ -60,12 +129,25 @@
       if (session.user) {
         showDashboard(session.user);
       } else {
+        showDashboard
         authView.style.display = '';
       }
     })
 
     document.getElementById('login-form').addEventListener('submit', handleLogin.bind(null, 'signIn'))
     document.getElementById('signup-form').addEventListener('submit', handleLogin.bind(null, 'signUp'))
+    
+
+    function showAuth() {
+      document.getElementById('dashboard-view').style.display = 'none'
+      document.getElementById('loading-view').style.display = 'none'
+      document.getElementById('auth-view').style.display = ''
+
+      document.getElementById('login-form').reset();
+      document.getElementById('signup-form').reset();
+      document.getElementById('login-error').innerText = ''
+      document.getElementById('signup-error').innerText = ''
+    }
 
     function handleLogin(method, e) {
       e.preventDefault()
@@ -82,6 +164,12 @@
         .catch(function (err) { errorText.innerText = err })
     }
 
+    function handleLogout() {
+      userbase.signOut()
+        .then(() => showAuth())
+        .catch((e) => document.getElementById('logout-error').innerText = e)
+    }
+
     function showDashboard(user) {
       document.getElementById('auth-view').style.display = 'none'
       document.getElementById('dashboard-view').style.display = ''
@@ -93,19 +181,40 @@
 
       userbase.getDatabases()
         .then(function (results) {
+          var template = document.querySelector('template#tile-template');
           results.databases.forEach(function (databaseMeta) {
-            var li = document.createElement('li');
-            var a = document.createElement('a');
-            a.innerText = JSON.stringify(databaseMeta);
-            a.href = `/rp.html?room=${databaseMeta.databaseId || databaseMeta.databaseName}`;
-            li.appendChild(a);
-            document.getElementById('rp-list').appendChild(li);
-          })
+            var el = template.content.cloneNode(true).querySelector('*');
+            el.href = `/rp.html?room=${databaseMeta.databaseId || databaseMeta.databaseName}`;
+            el.querySelector('h3').innerText = databaseMeta.databaseName.slice(3);
+            var ul = el.querySelector('.participants-list')
+            if (databaseMeta.isOwner) {
+              var li = document.createElement('li');
+              li.innerText = `You are the owner`;
+              ul.appendChild(li);
+            }
+            if (databaseMeta.receivedFromUsername) {
+              var li = document.createElement('li');
+              li.innerText = `Invited by: ${databaseMeta.receivedFromUsername}`;
+              ul.appendChild(li);
+            }
+            databaseMeta.users.forEach(function (user) {
+              if (user.username === databaseMeta.receivedFromUsername) {
+                return;
+              }
+              var li = document.createElement('li');
+              li.innerText = `Participant: ${user.username}`;
+              ul.appendChild(li);
+            });
+            // var date = entry.date && new Date(entry.date);
+            // el.querySelector('.rp-date').innerText = date && date.toLocaleString();
+            document.getElementById('rp-list').appendChild(el);
+          });
           document.getElementById('db-loading').style.display = 'none';
           console.log(results);
         })
         .catch(function (err) {
           document.getElementById('db-error').innerText = err
+          throw err;
         })
     }
 
