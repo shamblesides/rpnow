@@ -42,7 +42,6 @@
       padding: 10px;
       margin: 0;
       position: relative;
-      background-color: aquamarine;
     }
     .pane.rp header h3 {
       margin: 0;
@@ -183,14 +182,16 @@
         .then(function (results) {
           var template = document.querySelector('template#tile-template');
           results.databases.forEach(function (databaseMeta) {
+            var id = databaseMeta.databaseId || databaseMeta.databaseName;
             var el = template.content.cloneNode(true).querySelector('*');
-            el.href = `/rp.html?room=${databaseMeta.databaseId || databaseMeta.databaseName}`;
+            el.href = `/rp.html?room=${id}`;
             var h3 = el.querySelector('h3');
+            Object.assign(el.querySelector('header').style, colorsForString(id))
             try {
-              h3.innerText = localStorage.getItem('rptitles.' + (databaseMeta.databaseId || databaseMeta.databaseName)) || '';
+              h3.innerText = localStorage.getItem('rptitles.' + (id)) || '';
             } catch (err) {}
             if (!h3.innerText) {
-              h3.innerText = `RP #${databaseMeta.databaseId || databaseMeta.databaseName}`
+              h3.innerText = `RP #${id}`
             }
             var ul = el.querySelector('.participants-list')
             if (databaseMeta.isOwner) {
@@ -233,6 +234,33 @@
       .catch(function (err) {
         alert(err);
       })
+    }
+
+    function djb2(str){
+      var hash = 5381;
+      for (var i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i); /* hash * 33 + c */
+      }
+      return hash;
+    }
+
+    function colorsForString(str) {
+      // hash id into 32-bit integer
+      var hash = djb2(str.split('').reverse().join(''));
+
+      var rgb = [0,8,16].map(function (shift) {
+        return hash >> shift & 255;
+      })
+      var r = rgb[0];
+      var g = rgb[1];
+      var b = rgb[2];
+
+      var light = (r*299)+(g*587)+(b*114) > 128000;
+
+      return {
+        backgroundColor: `rgb(${r}, ${g}, ${b})`,
+        color: light? 'black':'white'
+      }
     }
   </script>
 </body>
