@@ -70,6 +70,9 @@
         🎀 View formatting info
       </a>
       <hr/>
+      <button onclick="openInviteDialog()">
+        ✉️ Invite Participant...
+      </button>
       <button onclick="openTitleDialog()">
         📓 Change story title...
       </button>
@@ -91,9 +94,6 @@
           <button type="submit" class="text-button">Download</button>
         </form>
       </details>
-      <a href="/api/audit" target="_blank">
-        🔍 Audit logins
-      </a>
       <details>
         <summary>📦 Export database</summary>
         <form action="/api/rp/export" method="POST" target="_blank">
@@ -292,6 +292,46 @@
       var name = prompt('What will you, the writer, be known by?');
       if (name != null) {
         RP.changeMyUsername(name);
+      }
+    }
+    function openInviteDialog() {
+      var username = prompt('Enter the username you are inviting');
+      if (username != null) {
+        userbase.shareDatabase({
+          databaseName: roomid,
+          username: username,
+          readOnly: false,
+        })
+        .then(function () {
+          alert('Invite successful')
+        })
+        .catch(function (err) {
+          if (err.name !== 'UserNotVerified') {
+            throw err;
+          }
+          var code = prompt(`You've never invited ${username} to an RP before! Please ask for their verification code to make sure it's them.`);
+          if (code == null) {
+            return;
+          }
+          return userbase.verifyUser({ verificationMessage: code })
+          .then(function () {
+            user.shareDatabase({
+              databaseName: roomid,
+              username: username,
+              readOnly: false,
+            })
+            .then(function () {
+              alert('Invite successful')
+            })
+            .catch(function (err) {
+              if (err.name === 'UserNotVerified') {
+                throw new Error(`Invite failed: This code does not belong to ${username}!`);
+              } else {
+                throw new Error(`Successfully verified user, but invite failed: ${err.message}`);
+              }
+            })
+          })
+        })
       }
     }
     function sendMessage(event) {

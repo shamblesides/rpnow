@@ -36,6 +36,13 @@
     <ul id="rp-list"></ul>
     <div id="db-loading">Loading RP list...</div>
     <div id="db-error"></div>
+
+    <h2>Join RP</h2>
+    <p>
+      Ask the RP creator to invite you to join.
+      You will have to provide a verification code.
+    </p>
+    <button onclick="showVerificationCode()">Get Verification Code</button>
   </div>
 
   <!-- application code -->
@@ -100,6 +107,17 @@
         .catch(function (err) {
           document.getElementById('db-error').innerText = err
         })
+    }
+
+    function showVerificationCode() {
+      userbase.getVerificationMessage()
+      .then(function (result) {
+        console.log(result)
+        prompt('Copy this code and send it to your friend.', result.verificationMessage);
+      })
+      .catch(function (err) {
+        alert(err);
+      })
     }
   </script>
 </body>
