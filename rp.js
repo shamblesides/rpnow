@@ -58,7 +58,7 @@ window.RP = (function() {
       var previousObjectReferences = new Map();
 
       var chatMsgIds = [];
-      var pagesMsgIds = [[]];
+      var pagesMsgIds = [];
 
       return userbase.openDatabase(Object.assign({
         changeHandler(changes) {
@@ -68,9 +68,11 @@ window.RP = (function() {
                 .map(function (x) { return x.itemId })
                 .filter(function (x) { return x.startsWith('m-') });
               chatMsgIds = allMsgIds.slice(-CHAT_SIZE);
-              pagesMsgIds = [];
               while (allMsgIds.length > 0) {
                 pagesMsgIds.push(allMsgIds.splice(0, PAGE_SIZE));
+              }
+              if (pagesMsgIds.length === 0) {
+                pagesMsgIds.push([]);
               }
               onpagecount(pagesMsgIds.length);
             }
