@@ -64,7 +64,9 @@ window.RP = (function() {
         changeHandler(changes) {
           try {
             if (isFirstUpdate) {
-              var allMsgIds = changes.map(x => x.itemId).filter(x => x.startsWith('m-'));
+              var allMsgIds = changes
+                .map(function (x) { return x.itemId })
+                .filter(function (x) { return x.startsWith('m-') });
               chatMsgIds = allMsgIds.slice(-CHAT_SIZE);
               pagesMsgIds = [];
               while (allMsgIds.length > 0) {

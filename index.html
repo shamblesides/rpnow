@@ -164,9 +164,11 @@
     }
 
     function handleLogout() {
-      userbase.signOut()
-        .then(() => showAuth())
-        .catch((e) => document.getElementById('logout-error').innerText = e)
+      userbase.signOut().then(function () {
+        showAuth();
+      }).catch(function (err) {
+        document.getElementById('logout-error').innerText = err;
+      });
     }
 
     function showDashboard(user) {
