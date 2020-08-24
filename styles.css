@@ -204,6 +204,7 @@ aside.error:empty {
 
 main {
   padding: 0 3% 0;
+  border-color: inherit;
 }
 #pager ~ main {
   padding-top: 40px;
