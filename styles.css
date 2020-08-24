@@ -495,8 +495,9 @@ main {
     box-shadow: unset;
     width: 320px;
   }
-  .drawer.drawer-dock-1024.drawer-right ~ main {
-    margin-right: 320px;
+  .drawer.drawer-dock-1024.drawer-right {
+    border-left: solid 1px;
+    border-color: inherit;
   }
   .drawer.drawer-dock-1024.drawer-right ~ main {
     margin-right: 320px;
