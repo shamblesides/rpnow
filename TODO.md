@@ -1,7 +1,7 @@
 Basic Prototype
 ===============
 
-* Pagination
+* Edit msgs/charas
 * Manage participants
 * Manage webhooks
 * Download TXT
