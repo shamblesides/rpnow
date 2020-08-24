@@ -1,6 +1,9 @@
 window.RP = (function() {
   var exports = {};
 
+  var PAGE_SIZE = exports.PAGE_SIZE = 20;
+  var CHAT_SIZE = exports.CHAT_SIZE = 60;
+
   var dbArgs;
   
   function alertError(err) {
@@ -54,9 +57,21 @@ window.RP = (function() {
       // them soooo
       var previousObjectReferences = new Map();
 
+      var chatMsgIds = [];
+      var pagesMsgIds = [[]];
+
       return userbase.openDatabase(Object.assign({
         changeHandler(changes) {
           try {
+            if (isFirstUpdate) {
+              var allMsgIds = changes.map(x => x.itemId).filter(x => x.startsWith('m-'));
+              chatMsgIds = allMsgIds.slice(-CHAT_SIZE);
+              pagesMsgIds = [];
+              while (allMsgIds.length > 0) {
+                pagesMsgIds.push(allMsgIds.splice(0, PAGE_SIZE));
+              }
+              onpagecount(pagesMsgIds.length);
+            }
             changes.forEach(function (change) {
               if (previousObjectReferences.get(change.itemId) === change.item) {
                 return;
@@ -64,8 +79,22 @@ window.RP = (function() {
               if (change.itemId === 'title') {
                 ontitle(change.item);
               } else if (change.itemId.startsWith('m-')) {
-                var obj = Object.assign({ _id: change.itemId }, change.item);
-                onmsg(obj, isFirstUpdate);
+                if (!isFirstUpdate && !previousObjectReferences.has(change.itemId)) {
+                  chatMsgIds.push(change.itemId);
+                  if (chatMsgIds.length > CHAT_SIZE) {
+                    chatMsgIds.shift();
+                  }
+                  if (pagesMsgIds[pagesMsgIds.length-1].length === PAGE_SIZE) {
+                    pagesMsgIds.push([]);
+                    onpagecount(pagesMsgIds.length);
+                  }
+                  pagesMsgIds[pagesMsgIds.length-1].push(change.itemId)
+                }
+                var isMessageVisible = (page >= 1 ? pagesMsgIds[page-1] : chatMsgIds).includes(change.itemId);
+                if (isMessageVisible) {
+                  var obj = Object.assign({ _id: change.itemId }, change.item);
+                  onmsg(obj, isFirstUpdate);
+                }
               } else if (change.itemId.startsWith('c-')) {
                 var obj = Object.assign({ _id: change.itemId }, change.item);
                 onchara(obj, isFirstUpdate);
@@ -73,7 +102,6 @@ window.RP = (function() {
               previousObjectReferences.set(change.itemId, change.item);
             })
             if (isFirstUpdate) {
-              onpagecount(changes.filter(c => c.itemId.startsWith('m-')).length || 1);
               onready(isFirstUpdate);
               isFirstUpdate = false;
             }

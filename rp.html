@@ -652,7 +652,7 @@
         if (!isInit && !oldEl) {
           if (!pagenum) {
             // only keep 10 msgs
-            while (main.childNodes.length > 10) {
+            while (main.childNodes.length > RP.CHAT_SIZE) {
               main.firstChild.remove();
             }
           }
