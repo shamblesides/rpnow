@@ -613,6 +613,9 @@
           // document.getElementById('my-user-name').dataset.userid = RP.myUserID;
           var loadingMsg = document.getElementById('loading-messages');
           loadingMsg.remove();
+          if (!pagenum) {
+            window.scrollBy(0, 999999);
+          }
         }
       },
       pageCount(pageCount) {
