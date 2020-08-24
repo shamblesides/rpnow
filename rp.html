@@ -53,6 +53,17 @@
     </header>
 
     <div class="drawer-body">
+      <button onclick="openInviteDialog()">
+        ✉️ Invite participant...
+      </button>
+      <button onclick="openTitleDialog()">
+        📓 Change story title...
+      </button>
+      <hr/>
+      <a href="/">
+        🏠 Return to RP list
+      </a>
+      <hr/>
       <label>
         🌒 Night mode
         <input type="checkbox" data-persist="nightMode" onchange="darkMode(event.target.checked)"/>
@@ -69,20 +80,13 @@
       <a href="format.html" target="_blank">
         🎀 View formatting info
       </a>
-      <hr/>
-      <button onclick="openInviteDialog()">
-        ✉️ Invite Participant...
-      </button>
-      <button onclick="openTitleDialog()">
-        📓 Change story title...
-      </button>
-      <button onclick="openWebhookDialog()">
+      <!-- <button onclick="openWebhookDialog()">
         🌐 Add Discord webhook...
       </button>
       <button onclick="openUsernameDialog()">
         👤 Change my username...
-      </button>
-      <hr/>
+      </button> -->
+      <!-- <hr/>
       <details>
         <summary>📃 Download .TXT</summary>
         <form action="/api/rp/download.txt" target="_blank">
@@ -102,12 +106,7 @@
           </p>
           <button type="submit" class="text-button">Download</button>
         </form>
-      </details>
-      <hr/>
-      <form action="/api/logout" method="POST" style="display:none" id="logout-form"></form>
-      <button type="submit" form="logout-form">
-        🚪 Logout
-      </button>
+      </details> -->
     </div>
   </section>
 
