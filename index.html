@@ -6,6 +6,7 @@
   <title>RPNow</title>
   <style>
     body {
+      width: 90%;
       max-width: 700px;
       margin: 20px auto;
       box-sizing: border-box;
@@ -43,8 +44,26 @@
       margin: 0;
       position: relative;
     }
-    .pane.rp header h3 {
+    details {
+      border: solid 1px black;
+      box-sizing: border-box;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 10px auto;
+      vertical-align: top;
+    }
+    summary {
+      padding: 15px;
+    }
+    summary h1, summary h3 {
+      display: inline-block;
       margin: 0;
+      line-height: 1;
+    }
+    summary a {
+      color: inherit;
+      border-bottom: dotted 1px;
+      border-bottom-color: inherit;
     }
   </style>
 </head>
@@ -75,49 +94,52 @@
     <button type="button" onclick="handleLogout()">Logout</button>
     <div id="logout-error"></div>
 
-    <h1>Create new RP</h1>
-    <button class="pane button" onclick="createRP()">
-      Create New RP
-    </button>
+    <details style="display: inline-block; width: 45%;">
+      <summary>
+        <h1>Create RP</h1>
+      </summary>
 
-    <h1>Join RP</h1>
-    <p>
-      Ask the RP creator to invite you to join.
-    </p>
-    <p>
-      If it's the first time that person is inviting you to an RP,
-      you will have to send them a verification code:
-    </p>
-    <button onclick="showVerificationCode()" class="pane button">Get Verification Code</button>
-    <p>
-      Once completed, you can simply refresh your page
-      and the RP will be here.
-    </p>
+      <button onclick="createRP()">
+        Start from scratch
+      </button>
+
+      <p>or import a .json file:</p>
+
+      <input type="file" name="file" accept=".json" required onchange="importRP(event)">
+    </details>
+
+    <details style="display: inline-block; width: 45%;">
+      <summary>
+        <h1>Join RP</h1>
+      </summary>
+
+      <p>Here's how it works:</p>
+      <ol>
+        <li>Your friend creates an RP</li>
+        <li>Your friend invites you to the RP</li>
+        <li>
+          If they have never invited you to an RP before, you will need to give them your verification code:
+          <button onclick="showVerificationCode()">Get Verification Code</button>
+        </li>
+        <li>You refresh this page, and the RP will be here</li>
+      </ol>
+    </details>
 
     <h1>My RPs</h1>
     <div id="rp-list"></div>
     <div id="db-loading">Loading RP list...</div>
     <div id="db-error"></div>
-
-    <h1>Import from Old RPNow</h1>
-    <p>If you had a .json file from an old version of RPNow, you can import it.</p>
-    <p>(If your RP was very large, you may not be able to import it successfully.)</p>
-    <input type="file" name="file" accept=".json" required onchange="importRP(event)">
   </div>
 
   <template id="tile-template">
-    <a class="pane rp">
-      <section>
-        <header>
+    <details>
+      <summary>
+        <a>
           <h3></h3>
-        </header>
-        <ul class="participants-list"></ul>
-      </section>
-      </div>
-      <div class="rp-info">
-
-      </div>
-    </router-link>
+        </a>
+      </summary>
+      <ul class="participants-list"></ul>
+    </details>
   </template>
 
   <!-- application code -->
@@ -188,12 +210,15 @@
       userbase.getDatabases()
         .then(function (results) {
           var template = document.querySelector('template#tile-template');
+          if (results.databases.length === 0) {
+            document.getElementById('rp-list').innerText = "No RP's yet! Create one?"
+          }
           results.databases.forEach(function (databaseMeta) {
             var id = databaseMeta.databaseId || databaseMeta.databaseName;
             var el = template.content.cloneNode(true).querySelector('*');
-            el.href = `/rp.html?room=${id}`;
+            el.querySelector('a').href = `/rp.html?room=${id}`;
+            Object.assign(el.querySelector('summary').style, colorsForString(id))
             var h3 = el.querySelector('h3');
-            Object.assign(el.querySelector('header').style, colorsForString(id))
             try {
               h3.innerText = localStorage.getItem('rptitles.' + (id)) || '';
             } catch (err) {}
