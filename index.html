@@ -98,6 +98,11 @@
     <div id="rp-list"></div>
     <div id="db-loading">Loading RP list...</div>
     <div id="db-error"></div>
+
+    <h1>Import from Old RPNow</h1>
+    <p>If you had a .json file from an old version of RPNow, you can import it.</p>
+    <p>(If your RP was very large, you may not be able to import it successfully.)</p>
+    <input type="file" name="file" accept=".json" required onchange="importRP(event)">
   </div>
 
   <template id="tile-template">
@@ -249,6 +254,111 @@
           itemId: 'title',
           item: 'Untitled',
         });
+      })
+      .then(function () {
+        window.location.href = `/rp.html?room=${rpid}`;
+      })
+      .catch(function (err) {
+        alert(err.message);
+        throw err;
+      })
+    }
+
+    function importRP(event) {
+      dashboardView.style.display = 'none';
+      loadingView.style.display = '';
+
+      var rpid = `rp-${Date.now().toString(36)}`;
+
+      var isEmpty = null;
+      userbase.openDatabase({
+        databaseName: rpid,
+        changeHandler(items) {
+          isEmpty = (items.length === 0);
+        }
+      })
+      .then(function () {
+        if (isEmpty !== true) {
+          throw new Error(`Failed to create RP: hasItems === ${isEmpty}`);
+        }
+        return new Promise(function (resolve) {
+          var fr = new FileReader();
+          fr.onload = function(evt) {
+            resolve(this.result)
+          }
+          fr.readAsText(event.target.files[0]);
+        })
+      })
+      .then(function (json) {
+        var messages = JSON.parse(json);
+        var meta = messages.shift();
+        console.log(meta);
+        console.log(messages);
+        var charaIds = [];
+        var nextCharaId = 1;
+        var nextMessageId = 1;
+        function wait(value) {
+          return new Promise(function (resolve) { setTimeout(resolve, 1000, value) })
+        }
+        return userbase.insertItem({
+          databaseName: rpid,
+          itemId: 'title',
+          item: meta.title,
+        }).then(function insertCharas() {
+          var chara = meta.charas.shift();
+          if (!chara) return;
+          var charaId = `c-${(nextCharaId++).toString(36).padStart(26, 0)}`;
+          charaIds.push(charaId)
+          console.log(`${charaId}   ${chara.name}`);
+          // TODO bulk inserts for speed
+          return userbase.insertItem({
+            databaseName: rpid,
+            itemId: charaId,
+            item: {
+              name: chara.name,
+              color: chara.color,
+            }
+          })
+          .catch(function (err) {
+            if (err.name === 'TooManyRequests') {
+              meta.charas.unshift(chara);
+              return
+            } else {
+              throw err;
+            }
+          })
+          .then(wait)
+          .then(insertCharas)
+        }).then(function insertMessages() {
+          var data = messages.shift();
+          if (!data) return;
+          var msg = (data.type === 'image') ? {
+            type: 'image',
+            url: data.url,
+          } : {
+            type: 'text',
+            who: ['narrator','ooc'].includes(data.type) ? data.type : charaIds[data.charaId],
+            content: data.content,
+          }
+          var msgId = `m-${(nextMessageId++).toString(36).padStart(26, 0)}`;
+          console.log(`${msgId}   ${msg.type} ${msg.who}    ${msg.content || msg.url}`);
+          // TODO bulk inserts for speed
+          return userbase.insertItem({
+            databaseName: rpid,
+            itemId: msgId,
+            item: msg
+          })
+          .catch(function (err) {
+            if (err.name === 'TooManyRequests') {
+              messages.unshift(data);
+              return
+            } else {
+              throw err;
+            }
+          })
+          .then(wait)
+          .then(insertMessages)
+        })
       })
       .then(function () {
         window.location.href = `/rp.html?room=${rpid}`;
