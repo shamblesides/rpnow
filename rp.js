@@ -4,6 +4,7 @@ window.RP = (function() {
   var PAGE_SIZE = exports.PAGE_SIZE = 20;
   var CHAT_SIZE = exports.CHAT_SIZE = 60;
 
+  var myUsername;
   var dbArgs;
   
   function alertError(err) {
@@ -27,7 +28,6 @@ window.RP = (function() {
     var onmsg = callbacks.msg;
     var onchara = callbacks.chara;
     var ontitle = callbacks.title;
-    var onuser = callbacks.user;
     var onpagecount = callbacks.pageCount;
     var onerror = callbacks.error;
 
@@ -36,7 +36,11 @@ window.RP = (function() {
       : { databaseName: roomid };
 
     userbase.init({ appId: '8dcdb794-f6c1-488d-966d-0058b5889c93' })
-    .then(function () {
+    .then(function (session) {
+      if (!session.user) {
+        throw new Error('You are not logged in!')
+      }
+      myUsername = session.user.username;
       return userbase.getDatabases()
     })
     .then(function (results) {
@@ -129,6 +133,7 @@ window.RP = (function() {
 
     var item = Object.assign({}, data);
     delete item._id;
+    item.createdBy = myUsername;
 
     var method = isUpdate ? 'updateItem' : 'insertItem';
 
@@ -167,10 +172,8 @@ window.RP = (function() {
     .then(callback)
   }
   
-  Object.defineProperty(exports, 'myUserID', { get: function() {
-    var cookieName = 'userid';
-    var cookieMatch = document.cookie.match('(^|[^;]+)\\s*' + cookieName + '\\s*=\\s*([^;]+)');
-    return cookieMatch ? cookieMatch.pop() : '';
+  Object.defineProperty(exports, 'myUsername', { get: function() {
+    return myUsername;
   } });
 
   exports.inviteUser = function inviteUser(username) {
