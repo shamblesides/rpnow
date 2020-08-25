@@ -44,6 +44,11 @@ window.RP = (function() {
       return userbase.getDatabases()
     })
     .then(function (results) {
+      // this wait is to prevent possible Userbase TooManyRequest errors.
+      // this is especially likely after just completing an import.
+      return new Promise(function (resolve) { setTimeout(resolve, 1000, results) });
+    })
+    .then(function (results) {
       var found = !!results.databases.find(function(db) {
         return (dbArgs.databaseId && dbArgs.databaseId === db.databaseId)
             || (dbArgs.databaseName && dbArgs.databaseName === db.databaseName)
