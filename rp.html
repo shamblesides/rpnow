@@ -164,7 +164,7 @@
 
   <template id="msg-text">
     <div class="message chara-bg">
-      <button class="history-button" onclick="showHistory(event)">edits</button>
+      <!-- <button class="history-button" onclick="showHistory(event)">edits</button> -->
       <button class="edit-button icon-button" onclick="toggleEditing(event)">✎</button>
       <div class="chara-name"></div>
       <div class="user-name"></div>
@@ -521,7 +521,7 @@
       el.id = data._id;
       el.dataset.rev = data._rev;
       if (data.userid !== RP.myUserID) {
-        el.querySelector('.edit-button').style.display = 'none';
+        // el.querySelector('.edit-button').style.display = 'none';
       }
       el.classList.add(data._id);
       el.querySelector('input[type=radio]').value = data._id;
@@ -537,7 +537,7 @@
       el.dataset.rev = data._rev;
       el.dataset.userid = data.userid;
       if (data.userid !== RP.myUserID && el.querySelector('.edit-button')) {
-        el.querySelector('.edit-button').style.display = 'none';
+        // el.querySelector('.edit-button').style.display = 'none';
       } 
       if (data.type === 'text') {
         el.dataset.who = data.who;

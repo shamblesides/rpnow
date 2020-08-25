@@ -140,7 +140,9 @@ window.RP = (function() {
       if (failCallback) failCallback(err);
       return alertError(err);
     })
-    .then(callback.bind(null, data))
+    .then(function (data) {
+      if (callback) callback(data);
+    });
   }
 
   exports.sendMessage = function sendMessage(data, callback, failCallback) {
