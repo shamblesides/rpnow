@@ -187,7 +187,7 @@ window.RP = (function() {
       }
       return userbase.verifyUser({ verificationMessage: code })
       .then(function () {
-        return user.shareDatabase(shareDatabaseParams)
+        return userbase.shareDatabase(shareDatabaseParams)
         .then(function () {
           alert('Invite successful')
         })
