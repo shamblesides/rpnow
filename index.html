@@ -151,7 +151,6 @@
 
     userbase.init({ appId: '8dcdb794-f6c1-488d-966d-0058b5889c93' })
     .then(function (session) {
-      loadingView.style.display = 'none';
       if (session.user) {
         showDashboard(session.user);
       } else {
@@ -175,6 +174,9 @@
     }
 
     function handleLogin(method, e) {
+      authView.style.display = 'none';
+      loadingView.style.display = '';
+
       e.preventDefault()
 
       var form = e.target;
@@ -198,8 +200,9 @@
     }
 
     function showDashboard(user) {
-      document.getElementById('auth-view').style.display = 'none'
-      document.getElementById('dashboard-view').style.display = ''
+      authView.style.display = 'none'
+      loadingView.style.display = 'none';
+      dashboardView.style.display = ''
 
       document.getElementById('username').innerText = user.username
       document.getElementById('rp-list').innerText = ''
