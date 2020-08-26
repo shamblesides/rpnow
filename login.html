@@ -1,0 +1,117 @@
+<!doctype html>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<style>
+  body {
+    width: 80%;
+    max-width: 300px;
+    height: 200px;
+    margin: auto;
+    padding: 50px 10%;
+  }
+</style>
+
+<body>
+  <noscript>
+    <a target="_blank" href="https://www.enable-javascript.com/">
+      Enable JavaScript
+    </a>
+    and try again
+  </noscript>
+  <div id="loading">Loading</div>
+  <form style="display:none" action="javascript:;" onsubmit="handleLogin(event)">
+    <h1 data-register>Create account</h1>
+    <h1 data-login>Log in</h1>
+
+    <input name="username" type="text" required placeholder="Username">
+    <input name="password" type="password" required placeholder="Password">
+    <input data-register name="email" type="email" placeholder="Email (optional)">
+
+    <br>
+    <br>
+
+    <input type="submit">
+  </form>
+  <div id="error"></div>
+
+  <p data-login>
+    New user? <a href="/login.html?signUp">Create an account</a>
+  </p>
+
+  <p data-register>
+    Already registered? <a href="/login.html">Log in</a>
+  </p>
+
+  <script>
+    var submitButton = document.querySelector('input[type=submit]');
+    var errorText = document.querySelector('#error');
+
+    var isRegister = (location.search === '?signUp')
+    if (isRegister) {
+      Array.from(document.querySelectorAll('[data-login]'))
+      .forEach(function (el) { el.remove() })
+      document.title = 'Log in'
+    } else {
+      Array.from(document.querySelectorAll('[data-register]'))
+      .forEach(function (el) { el.remove() })
+      document.title = 'Create Account'
+    }
+  </script>
+  <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js"></script>
+
+  <script>
+    userbase.init({ appId: '8dcdb794-f6c1-488d-966d-0058b5889c93' })
+    .then(function (session) {
+      if (session.user) {
+        document.body.innerHTML = `
+        <h1>Already logged in</h1>
+        <ul>
+          <li>
+            <a href="/">View dashboard</a>
+          </li>
+          <li>
+            <button onclick="handleLogout(event)">Log out</button>
+          </li>
+        </ul>
+        `;
+      } else {
+        document.querySelector('#loading').style.display = 'none'
+        document.querySelector('form').style.display = ''
+      }
+    })
+    function handleLogin(e) {
+      e.preventDefault()
+
+      submitButton.disabled = true;
+
+      var form = e.target;
+      var errorText = form.nextElementSibling;
+      errorText.innerText = '';
+
+      const username = form.elements.username.value;
+      const password = form.elements.password.value;
+
+      var method = isRegister ? 'signUp' : 'signIn'
+      userbase[method]({ username, password, rememberMe: 'local' })
+        .then(function () {
+          location.href = '/';
+        })
+        .catch(function (err) {
+          submitButton.disabled = false;
+          errorText.innerText = err
+        })
+    }
+
+    function handleLogout(event) {
+      event.target.disabled = true;
+      userbase.signOut().then(function () {
+        location.reload();
+      }).catch(function (err) {
+        alert(err.message);
+      });
+    }
+
+  </script>
+</body>

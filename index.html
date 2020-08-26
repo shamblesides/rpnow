@@ -10,8 +10,29 @@
       max-width: 700px;
       margin: 20px auto;
       box-sizing: border-box;
+      text-align: center;
+    }
+    header aside {
+      transform: translate(calc(-20vmin - 32px)) rotate(-10deg);
+      text-align: center;
+      margin-bottom: 0;
+      font-size: calc(16px + 7vmin);
+      line-height: 1;
+      font-family: "Alice";
+    }
+    header h1 {
+      margin: -2vmin 0 0;
+      text-align: center;
+      font-size: calc(24px + 14vmin);
+      line-height: 1;
+      font-family: "Playfair Display";
+      font-weight: normal;
+    }
+    body > div > p {
+      text-align: center;
     }
     details {
+      text-align: left;
       border: solid 1px black;
       box-sizing: border-box;
       border-radius: 10px;
@@ -22,7 +43,7 @@
     summary {
       padding: 15px;
     }
-    summary h1, summary h3 {
+    summary h2, summary h3 {
       display: inline-block;
       margin: 0;
       line-height: 1;
@@ -32,69 +53,100 @@
       border-bottom: dotted 1px;
       border-bottom-color: inherit;
     }
+    #signup-form {
+      margin: auto;
+      width: 200px;
+      text-align: center;
+    }
+    #top-buttons {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    #top-buttons details {
+      width: 49%;
+    }
+    #top-buttons details > :not(summary) {
+      margin-left: 20px;
+      margin-right: 20px;
+    }
+    #top-buttons details[open] summary {
+      margin-bottom: 10px;
+    }
+    #top-buttons details > :last-child {
+      margin-bottom: 20px;
+    }
+    #auth-view ul {
+      text-align: left;
+      display: inline-block;
+      width: 150px;
+    }
   </style>
 </head>
 
 <body>
+  <header title="Let's RPNow">
+    <aside>Let's</aside>
+    <h1>RPNow</h1>
+  </header>
+
   <div id="loading-view">Loading...</div>
 
   <div id="auth-view" style="display:none">
-    <h1>Login</h1>
-    <form id="login-form">
-      <input name="username" type="text" required placeholder="Username">
-      <input name="password" type="password" required placeholder="Password">
-      <input type="submit" value="Sign in">
-    </form>
-    <div id="login-error"></div>
+    <p>The Dead-Simple Text-Based Roleplay Website</p>
 
-    <h1>Create an account</h1>
-    <form id="signup-form">
-      <input name="username" type="text" required placeholder="Username">
-      <input name="password" type="password" required placeholder="Password">
-      <input type="submit" value="Create an account">
-    </form>
-    <div id="signup-error"></div>
+    <ul>
+      <li>
+        <a href="/login.html?signUp">Create account</a>
+      </li>
+      <li>
+        <a href="/login.html">Log in</a>
+      </li>
+    </ul>
   </div>
 
   <div id="dashboard-view" style="display:none">
     <p>
       You are logged in as <span id="username"></span>.
-      <button type="button" onclick="handleLogout()">Logout</button>
+      <button type="button" onclick="handleLogout()">Log out</button>
       <div id="logout-error"></div>
     </p>
 
-    <details style="display: inline-block; width: 45%;">
-      <summary>
-        <h1>Create RP</h1>
-      </summary>
+    <div id="top-buttons">
+      <details>
+        <summary>
+          <h2>Create RP</h2>
+        </summary>
 
-      <button onclick="createRP()">
-        Start from scratch
-      </button>
+        <button onclick="createRP()">
+          Start from scratch
+        </button>
 
-      <p>or import a .json file:</p>
+        <p>or import a .json file:</p>
 
-      <input type="file" name="file" accept=".json" required onchange="importRP(event)">
-    </details>
+        <input type="file" name="file" accept=".json" required onchange="importRP(event)">
+      </details>
 
-    <details style="display: inline-block; width: 45%;">
-      <summary>
-        <h1>Join RP</h1>
-      </summary>
+      <details>
+        <summary>
+          <h2>Join RP</h2>
+        </summary>
 
-      <p>Here's how it works:</p>
-      <ol>
-        <li>Your friend creates an RP</li>
-        <li>Your friend invites you to the RP</li>
-        <li>
-          If they have never invited you to an RP before, you will need to give them your verification code:
-          <button onclick="showVerificationCode()">Get Verification Code</button>
-        </li>
-        <li>You refresh this page, and the RP will be here</li>
-      </ol>
-    </details>
+        <span>Here's how it works:</span>
 
-    <h1>My RPs</h1>
+        <ol>
+          <li>Your friend creates an RP</li>
+          <li>Your friend invites you to the RP</li>
+          <li>
+            If they have never invited you to an RP before, you will need to give them your verification code:
+            <button onclick="showVerificationCode()">Get Verification Code</button>
+          </li>
+          <li>You refresh this page, and the RP will be here</li>
+        </ol>
+      </details>
+    </div>
+
+    <h2>My RPs</h2>
     <div id="rp-list"></div>
     <div id="db-loading">Loading RP list...</div>
     <div id="db-error"></div>
@@ -127,41 +179,10 @@
       }
     })
 
-    document.getElementById('login-form').addEventListener('submit', handleLogin.bind(null, 'signIn'))
-    document.getElementById('signup-form').addEventListener('submit', handleLogin.bind(null, 'signUp'))
-    
-
     function showAuth() {
-      document.getElementById('dashboard-view').style.display = 'none'
-      document.getElementById('loading-view').style.display = 'none'
-      document.getElementById('auth-view').style.display = ''
-
-      document.getElementById('login-form').reset();
-      document.getElementById('signup-form').reset();
-      document.getElementById('login-error').innerText = ''
-      document.getElementById('signup-error').innerText = ''
-    }
-
-    function handleLogin(method, e) {
-      authView.style.display = 'none';
-      loadingView.style.display = '';
-
-      e.preventDefault()
-
-      var form = e.target;
-      var errorText = form.nextElementSibling;
-      errorText.innerText = '';
-
-      const username = form.elements.username.value;
-      const password = form.elements.password.value;
-
-      userbase[method]({ username, password, rememberMe: 'local' })
-        .then(showDashboard)
-        .catch(function (err) {
-          authView.style.display = '';
-          loadingView.style.display = 'none';
-          errorText.innerText = err
-        })
+      dashboardView.style.display = 'none'
+      loadingView.style.display = 'none'
+      authView.style.display = ''
     }
 
     function handleLogout() {
