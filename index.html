@@ -291,6 +291,8 @@
     function importRP(event) {
       dashboardView.style.display = 'none';
       loadingView.style.display = '';
+      var meter = document.createElement('meter');
+      loadingView.appendChild(meter)
 
       var rpid = `rp-${Date.now().toString(36)}`;
 
@@ -320,8 +322,8 @@
         console.log(messages);
         var charaIds = [];
         var idCounter = 1;
-        var charasComplete = 0;
-        var msgsComplete = 0;
+        var totalCount = messages.length + meta.charas.length;
+        var progress = 0;
         function wait(value) {
           return new Promise(function (resolve) { setTimeout(resolve, 1000, value) })
         }
@@ -349,6 +351,8 @@
             })
           })
           .then(function () {
+            progress += batch.length / totalCount;
+            meter.value = progress;
             meta.charas.splice(0, 10);
             charaIds = charaIds.concat(batchIds);
           })
@@ -384,6 +388,8 @@
             })
           })
           .then(function () {
+            progress += batch.length / totalCount;
+            meter.value = progress;
             messages.splice(0, 10);
           })
           .catch(function (err) {
