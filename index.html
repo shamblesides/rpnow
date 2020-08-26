@@ -90,9 +90,11 @@
   </div>
 
   <div id="dashboard-view" style="display:none">
-    <div id="username"></div>
-    <button type="button" onclick="handleLogout()">Logout</button>
-    <div id="logout-error"></div>
+    <p>
+      You are logged in as <span id="username"></span>.
+      <button type="button" onclick="handleLogout()">Logout</button>
+      <div id="logout-error"></div>
+    </p>
 
     <details style="display: inline-block; width: 45%;">
       <summary>
