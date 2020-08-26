@@ -188,7 +188,11 @@
 
       userbase[method]({ username, password, rememberMe: 'local' })
         .then(showDashboard)
-        .catch(function (err) { errorText.innerText = err })
+        .catch(function (err) {
+          authView.style.display = '';
+          loadingView.style.display = 'none';
+          errorText.innerText = err
+        })
     }
 
     function handleLogout() {
