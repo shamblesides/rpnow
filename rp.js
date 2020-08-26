@@ -163,12 +163,6 @@ window.RP = (function() {
     .catch(alertError)
   }
 
-  exports.addWebhook = function addWebhook(webhook, callback) {
-    return requestWithJSON('PUT', 'api/webhook', { webhook: webhook })
-    .catch(alertError)
-    .then(callback)
-  }
-  
   Object.defineProperty(exports, 'myUsername', { get: function() {
     return myUsername;
   } });
