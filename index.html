@@ -219,7 +219,7 @@
               h3.innerText = localStorage.getItem('rptitles.' + (id)) || '';
             } catch (err) {}
             if (!h3.innerText) {
-              h3.innerText = `RP #${id}`
+              h3.innerText = '❗ Newly added RP'
             }
             var ul = el.querySelector('.participants-list')
             if (databaseMeta.isOwner) {
