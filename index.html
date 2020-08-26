@@ -213,7 +213,7 @@
             var id = databaseMeta.databaseId || databaseMeta.databaseName;
             var el = template.content.cloneNode(true).querySelector('*');
             el.querySelector('a').href = `/rp.html?room=${id}`;
-            Object.assign(el.querySelector('summary').style, colorsForString(id))
+            Object.assign(el.querySelector('summary').style, colorsForString(databaseMeta.databaseName))
             var h3 = el.querySelector('h3');
             try {
               h3.innerText = localStorage.getItem('rptitles.' + (id)) || '';
