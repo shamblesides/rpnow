@@ -207,7 +207,7 @@
         .then(function (results) {
           var template = document.querySelector('template#tile-template');
           if (results.databases.length === 0) {
-            document.getElementById('rp-list').innerText = "No RP's yet! Create one?"
+            document.getElementById('rp-list').innerText = "You haven't created or joined any RP yet"
           }
           results.databases.forEach(function (databaseMeta) {
             var id = databaseMeta.databaseId || databaseMeta.databaseName;
