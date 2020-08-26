@@ -41,22 +41,14 @@ window.RP = (function() {
         throw new Error('You are not logged in!')
       }
       myUsername = session.user.username;
-      return userbase.getDatabases()
-    })
-    .then(function (results) {
-      // this wait is to prevent possible Userbase TooManyRequest errors.
-      // this is especially likely after just completing an import.
-      return new Promise(function (resolve) { setTimeout(resolve, 1000, results) });
-    })
-    .then(function (results) {
-      var found = !!results.databases.find(function(db) {
-        return (dbArgs.databaseId && dbArgs.databaseId === db.databaseId)
-            || (dbArgs.databaseName && dbArgs.databaseName === db.databaseName)
+      return userbase.getDatabases(dbArgs)
+      .then(function (results) {
+        if (results.databases.length === 0) {
+          throw new Error('RP Not Found');
+        }
       })
-      if (!found) {
-        throw new Error('RP Not Found');
-      }
-
+    })
+    .then(function () {
       var isFirstUpdate = true;
       // TODO: hopefully at some point, the API for Userbase will change
       // so that we get notified of the exact changes, rather than having
