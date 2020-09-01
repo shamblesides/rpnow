@@ -32,7 +32,7 @@
     <br>
     <br>
 
-    <label for="sessionlength">Remember me for:</label>
+    <label for="sessionlength">Stay signed in for</label>
     <select name="sessionlength">
       <option value="24">a day</option>
       <option value="168">a week</option>
@@ -95,30 +95,33 @@
     function handleLogin(e) {
       e.preventDefault()
 
-      submitButton.disabled = true;
-
       var form = e.target;
       var errorText = form.nextElementSibling;
       errorText.innerText = '';
 
-      var username = form.elements.username.value;
-      var password = form.elements.password.value;
-      var sessionLength = Number(form.elements.sessionlength.value);
+      var params = {
+        username: form.elements.username.value,
+        password: form.elements.password.value,
+        sessionLength: Number(form.elements.sessionlength.value),
+      }
+      if (isRegister) {
+        params.email = form.elements.email.value;
+        if (!params.email) {
+          var proceedWithoutEmail = confirm("Without an e-mail address, you will be unable to reset your password! If you lose your password, you will be unable to recover your data.\n\nContinue?")
+          if (!proceedWithoutEmail) return;
+        }
+      }
+
+      submitButton.disabled = true;
 
       var method = isRegister ? 'signUp' : 'signIn'
-      userbase[method]({
-        username: username,
-        password: password,
-        sessionLength: sessionLength,
-        rememberMe: 'local',
+      userbase[method](params).then(function () {
+        location.href = '/';
       })
-        .then(function () {
-          location.href = '/';
-        })
-        .catch(function (err) {
-          submitButton.disabled = false;
-          errorText.innerText = err
-        })
+      .catch(function (err) {
+        submitButton.disabled = false;
+        errorText.innerText = err
+      })
     }
 
     function handleLogout(event) {
