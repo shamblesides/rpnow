@@ -1,7 +1,6 @@
 Basic Prototype
 ---------------
 
-* Forgot password
 * Download TXT
 * Export JSON
 * item.createdBy and item.updatedBy, username and timestamp

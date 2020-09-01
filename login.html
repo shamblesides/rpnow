@@ -29,6 +29,11 @@
     <input name="password" type="password" required placeholder="Password">
     <input data-register name="email" type="email" placeholder="Email (optional)">
 
+    <div data-register><br>You will only be able to reset your password if you provide an e-mail address,
+      <strong>and make the reset request from a device you've signed in with before!</strong>
+      So, choose a password you will remember, or store it somewhere safe.
+    </div>
+
     <br>
     <br>
 
@@ -46,6 +51,10 @@
     <input type="submit">
   </form>
   <div id="error"></div>
+
+  <p data-login>
+    Forgot password? <button type="button" onclick="forgotPassword()">Send reset e-mail</button>
+  </p>
 
   <p data-login>
     New user? <a href="/login.html?signUp">Create an account</a>
@@ -133,5 +142,18 @@
       });
     }
 
+    function forgotPassword(e) {
+      var form = document.querySelector('form')
+      var previouslyEntered = form.elements.username.value;
+      var username = prompt("Reset password for who?", previouslyEntered)
+      if (!username) return;
+      userbase.forgotPassword({ username: username })
+      .then(function() {
+        alert("E-mail sent!")
+      })
+      .catch(function (err) {
+        alert(err.message)
+      })
+    }
   </script>
 </body>
