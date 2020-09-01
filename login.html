@@ -32,6 +32,17 @@
     <br>
     <br>
 
+    <label for="sessionlength">Remember me for:</label>
+    <select name="sessionlength">
+      <option value="24">a day</option>
+      <option value="168">a week</option>
+      <option value="720">a month</option>
+      <option value="8760">a year</option>
+    </select>
+
+    <br>
+    <br>
+
     <input type="submit">
   </form>
   <div id="error"></div>
@@ -90,11 +101,17 @@
       var errorText = form.nextElementSibling;
       errorText.innerText = '';
 
-      const username = form.elements.username.value;
-      const password = form.elements.password.value;
+      var username = form.elements.username.value;
+      var password = form.elements.password.value;
+      var sessionLength = Number(form.elements.sessionlength.value);
 
       var method = isRegister ? 'signUp' : 'signIn'
-      userbase[method]({ username, password, rememberMe: 'local' })
+      userbase[method]({
+        username: username,
+        password: password,
+        sessionLength: sessionLength,
+        rememberMe: 'local',
+      })
         .then(function () {
           location.href = '/';
         })
