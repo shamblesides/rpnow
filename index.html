@@ -43,6 +43,25 @@
     summary {
       padding: 15px;
     }
+    #rp-list {
+      text-align: left;
+      padding: 0;
+    }
+    #rp-list li {
+      border: solid 1px black;
+      box-sizing: border-box;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 10px auto;
+    }
+    #rp-list h3 {
+      line-height: 1;
+      margin: 0;
+      padding: 15px;
+    }
+    #rp-list a {
+      color: inherit;
+    }
     summary h2, summary h3 {
       display: inline-block;
       margin: 0;
@@ -52,11 +71,6 @@
       color: inherit;
       border-bottom: dotted 1px;
       border-bottom-color: inherit;
-    }
-    #signup-form {
-      margin: auto;
-      width: 200px;
-      text-align: center;
     }
     #top-buttons {
       display: flex;
@@ -147,20 +161,17 @@
     </div>
 
     <h2>My RPs</h2>
-    <div id="rp-list"></div>
+    <ul id="rp-list"></ul>
     <div id="db-loading">Loading RP list...</div>
     <div id="db-error"></div>
   </div>
 
   <template id="tile-template">
-    <details>
-      <summary>
-        <a>
-          <h3></h3>
-        </a>
-      </summary>
-      <ul class="participants-list"></ul>
-    </details>
+    <li>
+      <a>
+        <h3></h3>
+      </a>
+    </li>
   </template>
 
   <!-- application code -->
@@ -213,7 +224,7 @@
             var id = databaseMeta.databaseId || databaseMeta.databaseName;
             var el = template.content.cloneNode(true).querySelector('*');
             el.querySelector('a').href = `/rp.html?room=${id}`;
-            Object.assign(el.querySelector('summary').style, colorsForString(databaseMeta.databaseName))
+            Object.assign(el.style, colorsForString(databaseMeta.databaseName))
             var h3 = el.querySelector('h3');
             try {
               h3.innerText = localStorage.getItem('rptitles.' + (id)) || '';
@@ -221,27 +232,6 @@
             if (!h3.innerText) {
               h3.innerText = '❗ Newly added RP'
             }
-            var ul = el.querySelector('.participants-list')
-            if (databaseMeta.isOwner) {
-              var li = document.createElement('li');
-              li.innerText = `You are the owner`;
-              ul.appendChild(li);
-            }
-            if (databaseMeta.receivedFromUsername) {
-              var li = document.createElement('li');
-              li.innerText = `Invited by: ${databaseMeta.receivedFromUsername}`;
-              ul.appendChild(li);
-            }
-            databaseMeta.users.forEach(function (user) {
-              if (user.username === databaseMeta.receivedFromUsername) {
-                return;
-              }
-              var li = document.createElement('li');
-              li.innerText = `Participant: ${user.username}`;
-              ul.appendChild(li);
-            });
-            // var date = entry.date && new Date(entry.date);
-            // el.querySelector('.rp-date').innerText = date && date.toLocaleString();
             document.getElementById('rp-list').appendChild(el);
           });
           document.getElementById('db-loading').style.display = 'none';
