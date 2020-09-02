@@ -515,6 +515,7 @@
       el.querySelector('form [name=_id]').value = data._id;
       el.querySelector('form [name=name]').defaultValue = data.name;
       el.querySelector('form [name=color]').defaultValue = data.color;
+      el.querySelector('form [name=color]').value = data.color;
       return el;
     }
     function buildMessageElement(data) {
