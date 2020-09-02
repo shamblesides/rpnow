@@ -246,7 +246,15 @@
       }
     }
     function toggleEditing(event) {
-      event.target.closest('.message, .chara-row').classList.toggle('editing');
+      var block = event.target.closest('.message, .chara-row');
+      block.classList.toggle('editing');
+
+      // hack: ios needs an extra whack so it applies the default value on input[type=color]
+      if (block.classList.contains('editing')) {
+        setTimeout(function() {
+          block.querySelector('form').reset();
+        });
+      }
     }
     function editImage(event) {
       var message = event.target.closest('.message');
@@ -515,7 +523,6 @@
       el.querySelector('form [name=_id]').value = data._id;
       el.querySelector('form [name=name]').defaultValue = data.name;
       el.querySelector('form [name=color]').defaultValue = data.color;
-      el.querySelector('form').reset();
       return el;
     }
     function buildMessageElement(data) {
