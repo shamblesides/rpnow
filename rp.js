@@ -209,7 +209,7 @@ window.RP = (function() {
 
     userbase.shareDatabase(shareDatabaseParams)
     .then(function () {
-      alert('Invite successful')
+      alert('Invite sent')
     })
     .catch(function (err) {
       if (err.name !== 'UserNotVerified') {
@@ -223,7 +223,7 @@ window.RP = (function() {
       .then(function () {
         return userbase.shareDatabase(shareDatabaseParams)
         .then(function () {
-          alert('Invite successful')
+          alert('Invite sent')
         })
         .catch(function (err) {
           if (err.name === 'UserNotVerified') {

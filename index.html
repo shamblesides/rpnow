@@ -149,6 +149,7 @@
         <span>Here's how it works:</span>
 
         <ol>
+          <li>Add your friend's username to the "Accepting invitations from" list below</li>
           <li>Your friend creates an RP</li>
           <li>Your friend invites you to the RP</li>
           <li>
@@ -159,6 +160,18 @@
         </ol>
       </details>
     </div>
+
+    <section>
+      You are accepting invitations from:
+      <ul id="friend-list" style="margin:auto; width:fit-content; text-align: left;">
+        <li>
+          <form onsubmit="addFriend(event)">
+            <input type="text" name="friend" placeholder="Friend's username">
+            <button type="submit">Add</button>
+          </form>
+        </li>
+      </ul>
+    </section>
 
     <h2>My RPs</h2>
     <ul id="rp-list"></ul>
@@ -204,6 +217,9 @@
       });
     }
 
+    var friendDbOpenPromise
+    var friendHash = {}
+
     function showDashboard(user) {
       authView.style.display = 'none'
       loadingView.style.display = 'none';
@@ -213,6 +229,20 @@
       document.getElementById('rp-list').innerText = ''
       document.getElementById('db-loading').style.display = 'block'
       document.getElementById('db-error').innerText = ''
+
+      friendDbOpenPromise = userbase.openDatabase({
+        databaseName: 'trusted-inviters',
+        changeHandler(changes) {
+          changes.forEach(function (change) {
+            var friendUsername = change.itemId
+            friendHash[friendUsername] = true
+            var li = document.createElement('li')
+            li.innerText = friendUsername
+            var friendList = document.getElementById('friend-list')
+            friendList.insertBefore(li, friendList.lastElementChild)
+          })
+        }
+      })
 
       var metaInfo = {}
       var metaDbOpenPromise = userbase.openDatabase({
@@ -227,22 +257,36 @@
 
       userbase.getDatabases()
         .then(function (results) {
+          console.log(results);
+          var roomInfos = []
+          return friendDbOpenPromise.then(function () {
+            results.databases.forEach(function (databaseMeta) {
+              if (!databaseMeta.databaseId && !databaseMeta.databaseName.startsWith('rp-')) {
+                return
+              }
+              if (!databaseMeta.isOwner) {
+                var ownerUser = databaseMeta.users.find(function (user) { return user.isOwner === true })
+                if (!friendHash[ownerUser.username]) return
+              }
+              var id = databaseMeta.databaseId || databaseMeta.databaseName;
+              var colors = colorsForString(databaseMeta.databaseName)
+              roomInfos.push({ id: id, colors: colors })
+            })
+            return roomInfos
+          })
+        }).then(function (roomInfos) {
           var template = document.querySelector('template#tile-template');
-          if (results.databases.length === 0) {
+          if (roomInfos.length === 0) {
             document.getElementById('rp-list').innerText = "You haven't created or joined any RP yet"
           }
-          results.databases.forEach(function (databaseMeta) {
-            if (!databaseMeta.databaseId && !databaseMeta.databaseName.startsWith('rp-')) {
-              return
-            }
-            var id = databaseMeta.databaseId || databaseMeta.databaseName;
+          roomInfos.forEach(function (info) {
             var el = template.content.cloneNode(true).querySelector('*');
-            el.querySelector('a').href = `/rp.html?room=${id}`;
-            Object.assign(el.style, colorsForString(databaseMeta.databaseName))
+            el.querySelector('a').href = `/rp.html?room=${info.id}`;
+            Object.assign(el.style, info.colors)
             var h3 = el.querySelector('h3');
             metaDbOpenPromise.then(function () {
-              if (metaInfo[id]) {
-                h3.innerText = metaInfo[id].title
+              if (metaInfo[info.id]) {
+                h3.innerText = metaInfo[info.id].title
               } else {
                 h3.innerText = '❗ Newly added RP'
               }
@@ -250,12 +294,35 @@
             document.getElementById('rp-list').appendChild(el);
           });
           document.getElementById('db-loading').style.display = 'none';
-          console.log(results);
         })
         .catch(function (err) {
           document.getElementById('db-error').innerText = err
           throw err;
         })
+    }
+
+    function addFriend(event) {
+      event.preventDefault()
+      var friendUsername = event.target.elements.friend.value;
+      event.target.elements.friend.value = '';
+
+      dashboardView.style.display = 'none';
+      loadingView.style.display = '';
+
+      friendDbOpenPromise.then(function () {
+        return userbase.insertItem({ databaseName: 'trusted-inviters', itemId: friendUsername, item: true })
+      }).then(function () {
+        location.reload()
+      }).catch(function (err) {
+        dashboardView.style.display = '';
+        loadingView.style.display = 'none';
+        if (err.name === 'ItemAlreadyExists') {
+          alert(`Already accepting invites from ${friendUsername}`)
+        } else {
+          alert(err.message)
+          throw err
+        }
+      })
     }
 
     function createRP() {
