@@ -291,6 +291,9 @@
     }
 
     function importRP(event) {
+      var file = event.target.files[0]
+      event.target.value = '';
+
       dashboardView.style.display = 'none';
       loadingView.style.display = '';
       var meter = document.createElement('meter');
@@ -316,7 +319,7 @@
           fr.onload = function(evt) {
             resolve(this.result)
           }
-          fr.readAsText(event.target.files[0]);
+          fr.readAsText(file);
         })
       })
       .then(function (json) {
