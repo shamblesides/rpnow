@@ -97,11 +97,21 @@ window.RP = (function() {
                 }
                 var isMessageVisible = (page >= 1 ? pagesMsgIds[page-1] : chatMsgIds).includes(change.itemId);
                 if (isMessageVisible) {
-                  var obj = Object.assign({ _id: change.itemId }, change.item);
+                  var obj = {
+                    _id: change.itemId,
+                    _user: (change.updatedBy || change.createdBy).username,
+                    _rev: +!!change.updatedBy,
+                  }
+                  Object.assign(obj, change.item);
                   onmsg(obj, isFirstUpdate);
                 }
               } else if (change.itemId.startsWith('c-')) {
-                var obj = Object.assign({ _id: change.itemId }, change.item);
+                var obj = {
+                  _id: change.itemId,
+                  _user: (change.updatedBy || change.createdBy).username,
+                  _rev: +!!change.updatedBy,
+                }
+                Object.assign(obj, change.item);
                 onchara(obj, isFirstUpdate);
               }
               previousObjectReferences.set(change.itemId, change.item);
@@ -129,8 +139,11 @@ window.RP = (function() {
     var itemId = data._id || ID(collection);
 
     var item = Object.assign({}, data);
-    delete item._id;
-    item.createdBy = myUsername;
+    for (var k in item) {
+      if (k.startsWith('_')) {
+        delete item[k];
+      }
+    }
 
     var method = isUpdate ? 'updateItem' : 'insertItem';
 

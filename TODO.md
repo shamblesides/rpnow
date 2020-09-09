@@ -3,7 +3,6 @@ Basic Prototype
 
 * Download TXT
 * Export JSON
-* item.createdBy and item.updatedBy, username and timestamp
 
 
 Stronger Userbase.com Integration

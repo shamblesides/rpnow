@@ -515,7 +515,7 @@
       var el = document.querySelector('template#chara-button').content.cloneNode(true).querySelector('*');
       el.id = data._id;
       el.dataset.rev = data._rev;
-      if (data.createdBy !== RP.myUsername) {
+      if (data._user !== RP.myUsername) {
         // el.querySelector('.edit-button').style.display = 'none';
       }
       el.classList.add(data._id);
@@ -530,8 +530,8 @@
       var el = template.content.cloneNode(true).querySelector('*');
       el.id = data._id;
       el.dataset.rev = data._rev;
-      el.querySelector('.user-name').innerText = data.createdBy;
-      if (data.createdBy !== RP.myUsername && el.querySelector('.edit-button')) {
+      el.querySelector('.user-name').innerText = data._user;
+      if (data._user !== RP.myUsername && el.querySelector('.edit-button')) {
         // el.querySelector('.edit-button').style.display = 'none';
       } 
       if (data.type === 'text') {
