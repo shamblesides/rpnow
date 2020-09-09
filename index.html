@@ -295,6 +295,8 @@
       loadingView.style.display = '';
       var meter = document.createElement('meter');
       loadingView.appendChild(meter)
+      var progressDiv = document.createElement('div');
+      loadingView.appendChild(progressDiv)
 
       var rpid = `rp-${Date.now().toString(36)}`;
 
@@ -353,8 +355,9 @@
             })
           })
           .then(function () {
-            progress += batch.length / totalCount;
-            meter.value = progress;
+            progress += batch.length;
+            progressDiv.innerText = `Importing data... (${progress/10|0} / ${totalCount/10|0})`;
+            meter.value = progress / totalCount;
             meta.charas.splice(0, 10);
             charaIds = charaIds.concat(batchIds);
           })
@@ -390,8 +393,9 @@
             })
           })
           .then(function () {
-            progress += batch.length / totalCount;
-            meter.value = progress;
+            progress += batch.length;
+            progressDiv.innerText = `Importing data... (${progress/10|0} / ${totalCount/10|0})`;
+            meter.value = progress / totalCount;
             messages.splice(0, 10);
           })
           .catch(function (err) {
