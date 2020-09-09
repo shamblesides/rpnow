@@ -43,23 +43,23 @@
     summary {
       padding: 15px;
     }
-    #rp-list {
+    .rp-list {
       text-align: left;
       padding: 0;
     }
-    #rp-list li {
+    .rp-list li {
       border: solid 1px black;
       box-sizing: border-box;
       border-radius: 10px;
       overflow: hidden;
       margin: 10px auto;
     }
-    #rp-list h3 {
+    .rp-list h3 {
       line-height: 1;
       margin: 0;
       padding: 15px;
     }
-    #rp-list a {
+    .rp-list a {
       color: inherit;
     }
     summary h2, summary h3 {
@@ -174,14 +174,20 @@
     </section>
 
     <h2>My RPs</h2>
-    <ul id="rp-list"></ul>
+    <ul id="rp-list" class="rp-list"></ul>
     <div id="db-loading">Loading RP list...</div>
     <div id="db-error"></div>
+    
+    <details id="hidden-rps" style="display: none; border: none">
+      <summary><b>Hidden RPs</b></summary>
+      <ul id="hidden-rp-list" class="rp-list"></ul>
+    </div>
   </div>
 
   <template id="tile-template">
     <li>
       <a>
+        <button class="hide-button" style="float:right">Hide</button>
         <h3>Loading...</h3>
       </a>
     </li>
@@ -293,13 +299,46 @@
             Object.assign(el.style, info.colors)
             var h3 = el.querySelector('h3');
             metaDbOpenPromise.then(function () {
-              if (metaInfo[info.id]) {
-                h3.innerText = metaInfo[info.id].title
+              var title = (metaInfo[info.id] && metaInfo[info.id] != null) ? metaInfo[info.id].title : '❗ Newly added RP'
+              var hidden = metaInfo[info.id] && metaInfo[info.id].hidden;
+              h3.innerText = title
+              var hideButton = el.querySelector('.hide-button');
+              function hide(event) {
+                if (event) {
+                  event.preventDefault()
+                  document.getElementById('rp-list').removeChild(el);
+                  if (metaInfo[info.id]) {
+                    metaInfo[info.id].hidden = true
+                    userbase.updateItem({ databaseName: 'dashboard-cache', itemId: info.id, item: metaInfo[info.id] })
+                  } else {
+                    metaInfo[info.id] = { hidden: true }
+                    userbase.insertItem({ databaseName: 'dashboard-cache', itemId: info.id, item: metaInfo[info.id] })
+                  }
+                }
+                document.getElementById('hidden-rps').style.display = '';
+                document.getElementById('hidden-rp-list').appendChild(el);
+                hideButton.innerText = 'Unhide'
+                hideButton.onclick = show
+              }
+              function show(event) {
+                metaInfo = metaInfo || {}
+                metaInfo.hidden = false
+                if (event) {
+                  event.preventDefault()
+                  document.getElementById('hidden-rp-list').removeChild(el);
+                  metaInfo[info.id].hidden = false
+                  userbase.updateItem({ databaseName: 'dashboard-cache', itemId: info.id, item: metaInfo[info.id] })
+                }
+                document.getElementById('rp-list').appendChild(el);
+                hideButton.innerText = 'Hide'
+                hideButton.onclick = hide
+              }
+              if (hidden) {
+                hide()
               } else {
-                h3.innerText = '❗ Newly added RP'
+                show()
               }
             })
-            document.getElementById('rp-list').appendChild(el);
           });
           document.getElementById('db-loading').style.display = 'none';
         })
