@@ -49,6 +49,19 @@ window.RP = (function() {
       })
     })
     .then(function () {
+      var rpMetaDoc = null
+      var metaDbOpenPromise = userbase.openDatabase({
+        databaseName: 'dashboard-cache',
+        changeHandler(changes) {
+          if (rpMetaDoc) return
+          var change = changes.find(function (change) {
+            return change.itemId === roomid
+          })
+          if (change) {
+            rpMetaDoc = change.item
+          }
+        }
+      })
       var isFirstUpdate = true;
       // TODO: hopefully at some point, the API for Userbase will change
       // so that we get notified of the exact changes, rather than having
@@ -83,6 +96,14 @@ window.RP = (function() {
               }
               if (change.itemId === 'title') {
                 ontitle(change.item);
+                metaDbOpenPromise.then(function () {
+                  var method = (rpMetaDoc == null) ? 'insertItem' : 'updateItem'
+                  if (rpMetaDoc == null) {
+                    rpMetaDoc = {}
+                  }
+                  rpMetaDoc.title = change.item
+                  userbase[method]({ databaseName: 'dashboard-cache', itemId: roomid, item: rpMetaDoc })
+                })
               } else if (change.itemId.startsWith('m-')) {
                 if (!isFirstUpdate && !previousObjectReferences.has(change.itemId)) {
                   chatMsgIds.push(change.itemId);

@@ -169,7 +169,7 @@
   <template id="tile-template">
     <li>
       <a>
-        <h3></h3>
+        <h3>Loading...</h3>
       </a>
     </li>
   </template>
@@ -214,6 +214,17 @@
       document.getElementById('db-loading').style.display = 'block'
       document.getElementById('db-error').innerText = ''
 
+      var metaInfo = {}
+      var metaDbOpenPromise = userbase.openDatabase({
+        databaseName: 'dashboard-cache',
+        changeHandler(changes) {
+          changes.forEach(function (change) {
+            metaInfo[change.itemId] = change.item
+          })
+          console.log(metaInfo)
+        }
+      })
+
       userbase.getDatabases()
         .then(function (results) {
           var template = document.querySelector('template#tile-template');
@@ -221,17 +232,21 @@
             document.getElementById('rp-list').innerText = "You haven't created or joined any RP yet"
           }
           results.databases.forEach(function (databaseMeta) {
+            if (!databaseMeta.databaseId && !databaseMeta.databaseName.startsWith('rp-')) {
+              return
+            }
             var id = databaseMeta.databaseId || databaseMeta.databaseName;
             var el = template.content.cloneNode(true).querySelector('*');
             el.querySelector('a').href = `/rp.html?room=${id}`;
             Object.assign(el.style, colorsForString(databaseMeta.databaseName))
             var h3 = el.querySelector('h3');
-            try {
-              h3.innerText = localStorage.getItem('rptitles.' + (id)) || '';
-            } catch (err) {}
-            if (!h3.innerText) {
-              h3.innerText = '❗ Newly added RP'
-            }
+            metaDbOpenPromise.then(function () {
+              if (metaInfo[id]) {
+                h3.innerText = metaInfo[id].title
+              } else {
+                h3.innerText = '❗ Newly added RP'
+              }
+            })
             document.getElementById('rp-list').appendChild(el);
           });
           document.getElementById('db-loading').style.display = 'none';

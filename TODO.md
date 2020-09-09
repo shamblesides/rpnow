@@ -16,7 +16,6 @@ Stronger Userbase.com Integration
 Nice to have
 ------------
 
-* Cache titles changes in cloud
 * Browse RP pages without browser navigation
 * Webhooks
 * Demo RP
