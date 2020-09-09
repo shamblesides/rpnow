@@ -237,7 +237,15 @@
             var friendUsername = change.itemId
             friendHash[friendUsername] = true
             var li = document.createElement('li')
+            li.style.position = 'relative'
             li.innerText = friendUsername
+            var x = document.createElement('button')
+            x.type = 'button'
+            x.innerText = 'X'
+            x.style.position = 'absolute'
+            x.style.right = '0'
+            x.onclick = removeFriend.bind(null, friendUsername)
+            li.appendChild(x)
             var friendList = document.getElementById('friend-list')
             friendList.insertBefore(li, friendList.lastElementChild)
           })
@@ -322,6 +330,22 @@
           alert(err.message)
           throw err
         }
+      })
+    }
+
+    function removeFriend(friendUsername) {
+      dashboardView.style.display = 'none';
+      loadingView.style.display = '';
+
+      friendDbOpenPromise.then(function () {
+        return userbase.deleteItem({ databaseName: 'trusted-inviters', itemId: friendUsername })
+      }).then(function () {
+        location.reload()
+      }).catch(function (err) {
+        dashboardView.style.display = '';
+        loadingView.style.display = 'none';
+        alert(err.message)
+        throw err
       })
     }
 
