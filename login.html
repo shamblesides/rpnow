@@ -39,6 +39,7 @@
 
     <label for="sessionlength">Stay signed in for</label>
     <select name="sessionlength">
+      <option value="0">until I close my browser</option>
       <option value="24">a day</option>
       <option value="168">a week</option>
       <option value="720">a month</option>
@@ -108,11 +109,14 @@
       var errorText = form.nextElementSibling;
       errorText.innerText = '';
 
+      var sessionLength = Number(form.elements.sessionlength.value);
+      var rememberMe = sessionLength > 0 ? 'local' : 'session';
       var params = {
         username: form.elements.username.value,
         password: form.elements.password.value,
-        sessionLength: Number(form.elements.sessionlength.value),
+        rememberMe: rememberMe,
       }
+      if (sessionLength > 0) params.sessionLength = sessionLength;
       if (isRegister) {
         params.email = form.elements.email.value;
         if (!params.email) {
