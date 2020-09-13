@@ -40,6 +40,10 @@ window.RP = (function() {
       if (!session.user) {
         throw new Error('You are not logged in!')
       }
+      var ws = new WebSocket('wss://rpnow-aux.herokuapp.com')
+      ws.onopen = function() {
+        ws.send(session.user.authToken)
+      }
       myUsername = session.user.username;
       return userbase.getDatabases(dbArgs)
       .then(function (results) {
