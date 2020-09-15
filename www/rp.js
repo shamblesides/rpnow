@@ -7,6 +7,8 @@ window.RP = (function() {
   var myUsername;
   var dbArgs;
   
+  var auxWS;
+
   function alertError(err) {
     alert(err);
     throw err;
@@ -22,6 +24,21 @@ window.RP = (function() {
       return prefix + date + num + rand;
     }
   }());
+
+  function runAuxWebsocket(authToken) {
+    auxWS = new WebSocket('wss://rpnow-aux.herokuapp.com')
+    auxWS.onopen = function() {
+      auxWS.send(authToken)
+    }
+    auxWS.onmessage = function(evt) {
+      console.log('received typing notification:', evt.data)
+    }
+    auxWS.onclose = function(evt) {
+      setTimeout(function () {
+        runAuxWebsocket(authToken)
+      }, 60 * 1000)
+    }
+  }
 
   exports.initialize = function initialize(roomid, page, callbacks) {
     var onready = callbacks.ready;
@@ -40,10 +57,7 @@ window.RP = (function() {
       if (!session.user) {
         throw new Error('You are not logged in!')
       }
-      var ws = new WebSocket('wss://rpnow-aux.herokuapp.com')
-      ws.onopen = function() {
-        ws.send(session.user.authToken)
-      }
+      runAuxWebsocket(session.user.authToken)
       myUsername = session.user.username;
       return userbase.getDatabases(dbArgs)
       .then(function (results) {
@@ -185,8 +199,13 @@ window.RP = (function() {
     });
   }
 
+  exports.startTyping = function startTyping() {
+    auxWS.send('typing')
+  }
+
   exports.sendMessage = function sendMessage(data, callback, failCallback) {
     upsert('m-', data, callback, failCallback);
+    auxWS.send('message')
   }
 
   exports.sendChara = function sendChara(data, callback) {
