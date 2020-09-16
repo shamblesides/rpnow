@@ -134,7 +134,11 @@ window.RP = (function() {
                   }
                   pagesMsgIds[pagesMsgIds.length-1].push(change.itemId)
                 }
-                var isMessageVisible = (page >= 1 ? pagesMsgIds[page-1] : chatMsgIds).includes(change.itemId);
+                var currentPageMsgIds = (page >= 1 ? pagesMsgIds[page-1] : chatMsgIds)
+                if (!currentPageMsgIds) {
+                  throw new Error(`Page ${page} does not exist`)
+                }
+                var isMessageVisible = currentPageMsgIds.includes(change.itemId);
                 if (isMessageVisible) {
                   var obj = {
                     _id: change.itemId,
