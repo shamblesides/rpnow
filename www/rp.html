@@ -221,15 +221,20 @@
     window.onerror = setError
   </script>
 
-  <script
-    src="https://browser.sentry-cdn.com/5.23.0/bundle.tracing.min.js"
-    integrity="sha384-lSZkoLgJeNT+V/zBEZAchPik9VPNr9wvgAY6mwoMK5SO/cMsK/whVXKKdQOL1oiw"
-    crossorigin="anonymous"
-  ></script>
+<script
+  src="https://browser.sentry-cdn.com/5.23.0/bundle.tracing.min.js"
+  integrity="sha384-lSZkoLgJeNT+V/zBEZAchPik9VPNr9wvgAY6mwoMK5SO/cMsK/whVXKKdQOL1oiw"
+  crossorigin="anonymous"
+></script>
   <script>
-    if ('Sentry' in window) Sentry.init({
-      dsn: 'https://36926c28fd2d451e970804c71c384c1b@o422204.ingest.sentry.io/5431412',
-    });
+    if ('Sentry' in window) {
+      console.log('initted')
+      Sentry.init({
+        dsn: 'https://36926c28fd2d451e970804c71c384c1b@o422204.ingest.sentry.io/5431412',
+        integrations: [new Sentry.Integrations.BrowserTracing()],
+        tracesSampleRate: 1.0, // Be sure to lower this in production
+      });
+    }
   </script>
 
   <script>
