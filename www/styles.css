@@ -399,6 +399,9 @@ main {
   background-color: inherit;
   color: inherit;
 }
+#send-box :nth-last-child(3) {
+  margin-right: 4px;
+}
 @media (min-width: 720px) {
   #send-box .change-chara {
     margin-left: 50px;
@@ -413,6 +416,7 @@ main {
   resize: none;
   width: 100%;
   padding: 8px;
+  padding-left: 12px;
   padding-right: 56px;
   background-color: rgba(255,255,255,0.8);
   color: black;
@@ -434,7 +438,7 @@ main {
 }
 @media (min-width: 720px) {
   #send-box textarea {
-    padding-left: 50px;
+    padding-left: 58px;
     padding-right: 90px;
   }
   #send-box button[type="submit"] {
