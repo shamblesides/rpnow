@@ -470,7 +470,7 @@
           item: meta.title,
         }).then(function insertCharas() {
           var batch = meta.charas.slice(0, 10).map(function (data) {
-            return { name: data.name, color: data.color };
+            return { name: data.name, color: data.color, timestampOverride: data.timestamp };
           })
           if (batch.length === 0) return;
           var batchIds = batch.map(function () {
@@ -504,10 +504,12 @@
             return (data.type === 'image') ? {
               type: 'image',
               url: data.url,
+              timestampOverride: data.timestamp,
             } : {
               type: 'text',
               who: ['narrator','ooc'].includes(data.type) ? data.type : charaIds[data.charaId],
               content: data.content,
+              timestampOverride: data.timestamp,
             }
           })
           if (batch.length === 0) return;
