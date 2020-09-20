@@ -516,8 +516,8 @@
       var el = document.querySelector('template#chara-button').content.cloneNode(true).querySelector('*');
       el.id = data._id;
       el.dataset.rev = data._rev;
-      if (Object.keys(data).sort().join(',') !== '_id,_rev,_user,color,name') {
-        throw new Error(`Invalid keys on message ${data._id}: ${Object.keys(data)}`)
+      if (!['_id','_rev','_user','color','name'].every(function (x) { return x in data })) {
+        throw new Error(`Invalid keys on chara ${data._id}: ${Object.keys(data)}`)
       }
       if (data._user !== RP.myUsername) {
         // el.querySelector('.edit-button').style.display = 'none';
@@ -539,7 +539,7 @@
         // el.querySelector('.edit-button').style.display = 'none';
       } 
       if (data.type === 'text') {
-        if (Object.keys(data).sort().join(',') !== '_id,_rev,_user,content,type,who') {
+        if (!['_id','_rev','_user','type','content','who'].every(function (x) { return x in data })) {
           throw new Error(`Invalid keys on message ${data._id}: ${Object.keys(data)}`)
         }
         el.dataset.who = data.who;
@@ -551,7 +551,7 @@
         el.querySelector('form [name=content]').defaultValue = data.content;
         el.querySelector('blockquote').innerHTML = formatRpMessage(data.content);
       } else if (data.type === 'image') {
-        if (Object.keys(data).sort().join(',') !== '_id,_rev,_user,type,url') {
+        if (!['_id','_rev','_user','type','url'].every(function (x) { return x in data })) {
           throw new Error(`Invalid keys on message ${data._id}: ${Object.keys(data)}`)
         }
         el.querySelector('img').src = data.url;
