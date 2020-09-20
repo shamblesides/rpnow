@@ -37,14 +37,8 @@
     <br>
     <br>
 
-    <label for="sessionlength">Stay signed in for</label>
-    <select name="sessionlength">
-      <option value="0">until I close my browser</option>
-      <option value="24">a day</option>
-      <option value="168">a week</option>
-      <option value="720">a month</option>
-      <option value="8760">a year</option>
-    </select>
+    <input name="rememberMe" type="checkbox">
+    <label for="rememberMe">Remember me</label>
 
     <br>
     <br>
@@ -83,7 +77,10 @@
   <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js"></script>
 
   <script>
-    userbase.init({ appId: '630241a7-b753-44d0-a7de-358fe646cc27' })
+    userbase.init({
+      appId: '630241a7-b753-44d0-a7de-358fe646cc27',
+      sessionLength: 365 * 24,
+    })
     .then(function (session) {
       if (session.user) {
         document.body.innerHTML = `
@@ -110,13 +107,13 @@
       errorText.innerText = '';
 
       var sessionLength = Number(form.elements.sessionlength.value);
-      var rememberMe = sessionLength > 0 ? 'local' : 'session';
+      var rememberMe = form.elements.rememberMe.checked
       var params = {
         username: form.elements.username.value,
         password: form.elements.password.value,
-        rememberMe: rememberMe,
+        rememberMe: rememberMe ? 'local' : 'session',
       }
-      if (sessionLength > 0) params.sessionLength = sessionLength;
+      if (rememberMe) params.sessionLength = 365 * 24;
       if (isRegister) {
         params.email = form.elements.email.value;
         if (!params.email) {

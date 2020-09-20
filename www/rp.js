@@ -52,7 +52,10 @@ window.RP = (function() {
       ? { databaseId: roomid }
       : { databaseName: roomid };
 
-    userbase.init({ appId: '630241a7-b753-44d0-a7de-358fe646cc27' })
+    userbase.init({
+      appId: '630241a7-b753-44d0-a7de-358fe646cc27',
+      sessionLength: 365 * 24,
+    })
     .then(function (session) {
       if (!session.user) {
         throw new Error('You are not logged in!')
