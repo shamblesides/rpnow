@@ -278,14 +278,14 @@
           var roomInfos = []
           return friendDbOpenPromise.then(function () {
             results.databases.forEach(function (databaseMeta) {
-              if (!databaseMeta.databaseId && !databaseMeta.databaseName.startsWith('rp-')) {
+              if (!databaseMeta.databaseName.startsWith('rp-')) {
                 return
               }
               if (!databaseMeta.isOwner) {
                 var ownerUser = databaseMeta.users.find(function (user) { return user.isOwner === true })
                 if (!friendHash[ownerUser.username]) return
               }
-              var id = databaseMeta.databaseId || databaseMeta.databaseName;
+              var id = databaseMeta.isOwner ? databaseMeta.databaseName : databaseMeta.databaseId;
               var colors = colorsForString(databaseMeta.databaseName)
               roomInfos.push({ id: id, colors: colors })
             })
