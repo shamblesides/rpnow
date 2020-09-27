@@ -1,0 +1,149 @@
+<!doctype html>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>User settings</title>
+
+<style>
+  body {
+    width: 80%;
+    /* max-width: 300px; */
+    height: 200px;
+    margin: auto;
+    padding: 50px 10%;
+  }
+</style>
+
+<body>
+  <noscript>
+    <a target="_blank" href="https://www.enable-javascript.com/">
+      Enable JavaScript
+    </a>
+    and try again
+  </noscript>
+  <div id="loading">Loading</div>
+  <div id="view" style="display:none;">
+    <nav>
+      <a href="/">&lt; Back</a>
+    </nav>
+    <h2>User profile</h2>
+    <form onsubmit="changeUsername(event)">
+      <label>
+        Username:
+        <input name="username" required>
+      </label>
+      <button type="submit">Submit</button>
+    </form>
+    <form onsubmit="changeEmail(event)">
+      <label>
+        E-mail:
+        <input name="email" required>
+      </label>
+      <button type="submit">Submit</button>
+    </form>
+    <h2>Change password</h2>
+    <form onsubmit="changePassword(event)">
+      <label>
+        Current password:
+        <input type="password" name="currentPassword" required>
+      </label>
+      <br>
+      <label>
+        New password:
+        <input type="password" name="newPassword" required>
+      </label>
+      <br>
+      <br>
+      <button type="submit">Submit</button>
+    </form>
+    <h2>Delete account</h2>
+    <p><strong>This will also delete every RP you started!</strong></p>
+    <p>To delete your account, enter the following:</p>
+    <pre id="delete-text"></pre>
+    <form onsubmit="deleteAccount(event)">
+      <input name="confirmDelete" required>
+      <button type="submit">Delete my account</button>
+    </form>
+  </div>
+
+  <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js"></script>
+
+  <script>
+    userbase.init({
+      appId: '630241a7-b753-44d0-a7de-358fe646cc27',
+      sessionLength: 365 * 24,
+    })
+    .then(function (session) {
+      if (!session.user) {
+        document.body.innerHTML = `
+        <h1>Not logged in</h1>
+        <p>
+          <a href="/">Back home</a>
+        </p>
+        `;
+        return;
+      }
+
+      document.querySelector('#loading').style.display = 'none'
+      document.querySelector('#view').style.display = ''
+
+      document.querySelector('input[name=username]').placeholder = session.user.username
+      document.querySelector('input[name=email]').placeholder = session.user.email
+
+      var deleteText = `delete ${session.user.username} forever`
+      document.querySelector('#delete-text').innerText = deleteText
+      document.querySelector('input[name=confirmDelete]').pattern = deleteText
+    })
+
+    function updateAndReload(args) {
+      document.querySelector('#loading').style.display = ''
+      document.querySelector('#view').style.display = 'none'
+
+      userbase.updateUser(args)
+      .then(function () {
+        location.reload()
+      })
+      .catch(function (err) {
+        alert(err.message)
+        document.querySelector('#loading').style.display = 'none'
+        document.querySelector('#view').style.display = ''
+      })
+    }
+
+    function changeUsername(event) {
+      event.preventDefault()
+      var username = event.target.elements.username.value
+      updateAndReload({ username: username })
+    }
+    function changeEmail(event) {
+      event.preventDefault()
+      var email = event.target.elements.email.value
+      updateAndReload({ email: email })
+    }
+    function changePassword(event) {
+      event.preventDefault()
+      var currentPassword = event.target.elements.currentPassword.value
+      var newPassword = event.target.elements.newPassword.value
+      updateAndReload({ currentPassword: currentPassword, newPassword: newPassword })
+    }
+    function deleteAccount(event) {
+      event.preventDefault()
+      if (!confirm('Really delete your account forever?')) return;
+
+      document.querySelector('#loading').style.display = ''
+      document.querySelector('#view').style.display = 'none'
+
+      userbase.deleteUser()
+      .then(function () {
+        alert('Farewell!')
+        location.href = '/'
+      })
+      .catch(function (err) {
+        alert(err.message)
+        document.querySelector('#loading').style.display = 'none'
+        document.querySelector('#view').style.display = ''
+      })
+    }
+  </script>
+</body>

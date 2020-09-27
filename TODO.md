@@ -1,4 +1,3 @@
-* User settings (change my password, email, delete account, etc)
 * Manage participants
 * Browse RP pages without browser navigation
 * Demo RP
