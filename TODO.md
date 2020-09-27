@@ -1,5 +1,3 @@
-* Download TXT
-* Export JSON
 * User settings (change my password, email, delete account, etc)
 * Manage participants
 * Browse RP pages without browser navigation
