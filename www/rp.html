@@ -85,10 +85,10 @@
       <button onclick="openUsernameDialog()">
         👤 Change my username...
       </button> -->
-      <!-- <hr/>
+      <hr/>
       <details>
         <summary>📃 Download .TXT</summary>
-        <form action="/api/rp/download.txt" target="_blank">
+        <form onsubmit="downloadTXT(event)">
           <label>
             <input type="checkbox" name="includeOOC" value="true" checked>
             Include OOC messages
@@ -99,13 +99,13 @@
       </details>
       <details>
         <summary>📦 Export database</summary>
-        <form action="/api/rp/export" method="POST" target="_blank">
+        <form onsubmit="downloadJSON(event)">
           <p>
             This will download all RP data and history in a format that can be imported into a new server.
           </p>
           <button type="submit" class="text-button">Download</button>
         </form>
-      </details> -->
+      </details>
     </div>
   </section>
 
@@ -390,6 +390,16 @@
     function showHistory(event) {
       var id = event.target.closest('.message').id;
       window.open(`diff.html?id=${id}`, '_blank');
+    }
+
+    function downloadTXT(event) {
+      event.preventDefault()
+      var includeOOC = event.target.elements.includeOOC.checked
+      RP.downloadTXT(includeOOC)
+    }
+    function downloadJSON() {
+      event.preventDefault()
+      RP.downloadJSON()
     }
   </script>
   

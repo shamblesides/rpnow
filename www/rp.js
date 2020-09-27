@@ -9,6 +9,8 @@ window.RP = (function() {
   
   var auxWS;
 
+  var lastChanges = null;
+
   function alertError(err) {
     alert(err);
     throw err;
@@ -97,6 +99,7 @@ window.RP = (function() {
 
       return userbase.openDatabase(Object.assign({
         changeHandler(changes) {
+          lastChanges = changes
           try {
             if (isFirstUpdate) {
               var allMsgIds = changes
@@ -268,7 +271,121 @@ window.RP = (function() {
       alert(err.message);
     })
   }
-  
+
+  exports.downloadTXT = function downloadTXT(includeOOC) {
+    var names = {}
+
+    function wordwrap(str, indent='', width=72) {
+      width -= indent.length;
+      var regex = RegExp('.{0,' +width+ '}(\\s|$)|.{' +width+ '}|.+$', 'g');
+      var lines = str.trim().match(regex).map(function(line) { return line.trimRight() });
+      if (lines[lines.length-1] === '') lines.pop();
+      return indent + lines.join('\n'+indent);
+    }
+    function msgText(msg) {
+      if (msg.who === 'narrator') {
+        return wordwrap(msg.content);
+      } else if (msg.who === 'ooc') {
+        return wordwrap(`(( OOC: ${msg.content} ))`);
+      } else {
+        var name = names[msg.who] || 'UNKNOWN CHARA';
+        var indentedContent = wordwrap(msg.content, '  ');
+        return `${name.toUpperCase()}:\n${indentedContent}`;
+      }
+    }
+
+    var lines = []
+    function write(str) {
+      lines.push(str.replace(/\n/g, '\r\n'), '\r\n\r\n');
+    }
+
+    var titleChange = lastChanges.find(function(x) { return x.itemId === 'title' })
+    var title = titleChange.item.toString()
+    write(title)
+    write('-------------')
+
+    for (var change of lastChanges) {
+      if (change.itemId.startsWith('m-')) {
+        var msg = change.item
+        if (typeof msg !== 'object') continue
+        if (msg.type === 'text') {
+          if (msg.who === 'ooc' && !includeOOC) continue;
+          var msgBlock = msgText(msg);
+          write(msgBlock);
+        } else if (msg.type === 'image') {
+          write(`--- IMAGE ---\n${msg.url}\n-------------`)
+        }
+      } else if (change.itemId.startsWith('c-')) {
+        names[change.itemId] = change.item.name
+      }
+    }
+
+    var filename = `${title.replace(/[^a-zA-Z ]/g, "")}.txt`
+    var file = new File(lines, filename, { type: 'text/plain' })
+    var url = URL.createObjectURL(file)
+    var a = document.createElement('a')
+    a.href = url
+    a.target = '_blank'
+    a.download = filename
+    a.click()
+  }
+
+  exports.downloadJSON = function downloadJSON() {
+    var meta = { title: null, charas: [] }
+    var charasIndexForId = {}
+
+    var separator = ',\n'
+    var strings = ['[\n', null]
+    function addMessage(obj) {
+      strings.push(separator, JSON.stringify(obj));
+    }
+    function updateMeta() {
+      strings[1] = JSON.stringify(meta)
+    }
+    function endFile() {
+      strings.push('\n]')
+    }
+
+    var titleChange = lastChanges.find(function(x) { return x.itemId === 'title' })
+    meta.title = titleChange.item.toString()
+
+    for (var change of lastChanges) {
+      if (change.itemId.startsWith('m-')) {
+        if (typeof change.item !== 'object') continue
+        var msg = {
+          timestamp: change.item.timestampOverride || change.createdBy.timestamp,
+          type: (change.item.who && change.item.who.startsWith('c-')) ? 'chara' : (change.item.who || change.item.type)
+        }
+        if (change.item.type === 'text') {
+          msg.content = change.item.content
+          if (charasIndexForId[change.item.who] != null) msg.charaId = charasIndexForId[change.item.who]
+        } else if (change.item.type === 'image') {
+          msg.url = change.item.url
+        }
+        addMessage(msg)
+      } else if (change.itemId.startsWith('c-')) {
+        charasIndexForId[change.itemId] = meta.charas.length
+        meta.charas.push({
+          timestamp: change.item.timestampOverride || change.createdBy.timestamp,
+          name: change.item.name,
+          color: change.item.color,
+        })
+      }
+    }
+
+    updateMeta()
+    endFile()
+
+    var filename = `${meta.title.replace(/[^a-zA-Z ]/g, "")}.json`
+    var file = new File(strings, filename, { type: 'application/json' })
+    var url = URL.createObjectURL(file)
+    var a = document.createElement('a')
+    a.href = url
+    a.target = '_blank'
+    a.download = filename
+    a.click()
+  }
+
   return exports;
-  
+
 }());
