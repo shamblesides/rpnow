@@ -45,6 +45,22 @@
     <button type="reset" class="text-button" onclick="closeMe(event)">Cancel ✘</button>
   </form>
 
+  <div id="participants-dialog" class="dialog" data-page="chat">
+    <h3>Participants</h3>
+    <table style="width:100%; margin-bottom:20px">
+      <thead style="text-align:left">
+        <tr>
+          <th>Username</th>
+          <th>Write</th>
+          <th>Invite</th>
+          <th>Uninvite</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button type="button" class="text-button" onclick="closeMe(event)">Cancel ✘</button>
+  </div>
+
   <section id="main-menu" class="drawer drawer-left">
     <header>
       <h2>Menu</h2>
@@ -54,6 +70,9 @@
     <div class="drawer-body">
       <button onclick="openInviteDialog()">
         ✉️ Invite participant...
+      </button>
+      <button onclick="openParticipantsDialog()">
+        👥️ Manage participants...
       </button>
       <button onclick="openTitleDialog()">
         📓 Change story title...
@@ -214,6 +233,15 @@
     </div>
   </template>
 
+  <template id="participant-tr">
+    <tr>
+      <td class="username-column"></td>
+      <td><input type="checkbox" class="write-checkbox" onchange="setWritePermission(event)"></td>
+      <td><input type="checkbox" class="share-checkbox" onchange="setSharePermission(event)"></td>
+      <td><button type="button" class="uninvite-button text-button" style="padding:2px;width:unset" onclick="confirmUninvite(event)">Uninvite</td>
+    </tr>
+  </template>
+
   <script>
     function setError(error) {
       document.querySelector('aside.error').innerText = (error || '').toString();
@@ -305,6 +333,44 @@
       if (username != null) {
         RP.inviteUser(username);
       }
+    }
+    function openParticipantsDialog() {
+      openPopup('participants-dialog');
+      RP.getParticipantInfo(function (users, canChange) {
+        var tbody = document.querySelector('#participants-dialog tbody')
+        tbody.innerText = ''
+        users.forEach(function (user) {
+          console.log(user)
+          var tr = document.querySelector('template#participant-tr').content.cloneNode(true).querySelector('*');
+          tr.dataset.username = user.username
+          tr.querySelector('.username-column').innerText = user.username
+          tr.querySelector('.write-checkbox').checked = !user.readOnly
+          tr.querySelector('.share-checkbox').checked = user.resharingAllowed
+          if (!canChange || user.isOwner) {
+            tr.querySelector('.write-checkbox').disabled = true
+            tr.querySelector('.share-checkbox').disabled = true
+            tr.querySelector('.uninvite-button').remove()
+          }
+          tbody.appendChild(tr)
+        })
+      })
+    }
+    function setWritePermission(event) {
+      var username = event.target.closest('tr').dataset.username
+      var yes = event.target.checked
+      RP.setWritePermission(username, yes)
+    }
+    function setSharePermission(event) {
+      var username = event.target.closest('tr').dataset.username
+      var yes = event.target.checked
+      RP.setSharePermission(username, yes)
+    }
+    function confirmUninvite(event) {
+      var username = event.target.closest('tr').dataset.username
+      if (!confirm(`Un-invite ${username} from the RP?`)) return;
+      RP.uninviteUser(username, function () {
+        event.target.closest('tr').remove()
+      })
     }
     function sendMessage(event) {
       event.preventDefault();

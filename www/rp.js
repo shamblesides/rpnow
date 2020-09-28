@@ -234,6 +234,14 @@ window.RP = (function() {
     return myUsername;
   } });
 
+  exports.getParticipantInfo = function getParticipantInfo(callback) {
+    userbase.getDatabases(dbArgs).then(function (result) {
+      var users = result.databases[0].users
+      var canShare = result.databases[0].resharingAllowed
+      callback(users, canShare)
+    })
+  }
+
   exports.inviteUser = function inviteUser(username) {
     var shareDatabaseParams = Object.assign({
       username: username,
@@ -270,6 +278,33 @@ window.RP = (function() {
     .catch(function (err) {
       alert(err.message);
     })
+  }
+
+  exports.uninviteUser = function uninviteUser(username, callback) {
+    var params = { username: username, revoke: true }
+    Object.assign(params, dbArgs)
+
+    userbase.modifyDatabasePermissions(params)
+    .then(callback)
+    .catch(alertError)
+  }
+
+  exports.setWritePermission = function setWritePermission (username, canWrite, callback) {
+    var params = { username: username, readOnly: !canWrite }
+    Object.assign(params, dbArgs)
+
+    userbase.modifyDatabasePermissions(params)
+    .then(callback)
+    .catch(alertError)
+  }
+
+  exports.setSharePermission = function setSharePermission(username, canShare, callback) {
+    var params = { username: username, resharingAllowed: canShare }
+    Object.assign(params, dbArgs)
+
+    userbase.modifyDatabasePermissions(params)
+    .then(callback)
+    .catch(alertError)
   }
 
   exports.downloadTXT = function downloadTXT(includeOOC) {
