@@ -1,4 +1,3 @@
-* Manage participants
 * Browse RP pages without browser navigation
 * Demo RP
 * Delete messages
