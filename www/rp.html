@@ -383,7 +383,9 @@
         return;
       }
       // this will modify args if we are using an OOC shortcut
-      if (args.who !== 'ooc') {
+      if (window.PLUGINS && args.content.split(' ', 1) in window.PLUGINS) {
+        // TODO plugin
+      } else if (args.who !== 'ooc') {
         var newContent = [
           /^\({2,}\s*([\s\S]*?[^\s])\s*\)*$/g, // (( message text ))
           /^\{+\s*([\s\S]*?[^\s])\s*\}*$/g, // { message text }, {{ message text }}, ...
