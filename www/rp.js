@@ -7,6 +7,7 @@ window.RP = (function() {
   var myUsername;
   var dbArgs;
   
+  var initPromise;
   var auxWS;
 
   var lastChanges = null;
@@ -27,10 +28,13 @@ window.RP = (function() {
     }
   }());
 
-  function runAuxWebsocket(authToken) {
-    auxWS = new WebSocket('wss://rpnow-aux.herokuapp.com')
+  function runAuxWebsocket(authToken, dbId) {
+    var wsURL = 'wss://rpnow-aux.herokuapp.com'
+    // var wsURL = 'ws://localhost:13002'
+
+    auxWS = new WebSocket(wsURL)
     auxWS.onopen = function() {
-      auxWS.send(authToken)
+      auxWS.send(authToken + ' ' + dbId)
     }
     auxWS.onmessage = function(evt) {
       console.log('received typing notification:', evt.data)
@@ -54,7 +58,7 @@ window.RP = (function() {
       ? { databaseId: roomid }
       : { databaseName: roomid };
 
-    userbase.init({
+    initPromise = userbase.init({
       appId: '630241a7-b753-44d0-a7de-358fe646cc27',
       sessionLength: 365 * 24,
     })
@@ -62,13 +66,14 @@ window.RP = (function() {
       if (!session.user) {
         throw new Error('You are not logged in!')
       }
-      runAuxWebsocket(session.user.authToken)
       myUsername = session.user.username;
       return userbase.getDatabases(dbArgs)
       .then(function (results) {
         if (results.databases.length === 0) {
           throw new Error('RP Not Found');
         }
+        var dbId = results.databases[0].databaseId
+        runAuxWebsocket(session.user.authToken, dbId)
       })
     })
     .then(function () {
