@@ -426,6 +426,12 @@ window.RP = (function() {
     a.click()
   }
 
+  exports.sendFcmToken = function sendFcmToken(token) {
+    initPromise.then(function() {
+      auxWS.send('fcm ' + token)
+    })
+  }
+
   return exports;
 
 }());
