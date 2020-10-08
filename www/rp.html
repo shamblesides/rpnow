@@ -205,6 +205,13 @@
     </div>
   </template>
 
+  <template id="msg-unknown">
+    <div class="message">
+      <h3>Unknown message type!</h3>
+      <dl></dl>
+    </div>
+  </template>
+
   <template id="chara-button">
     <div class="chara-row">
       <label>
@@ -223,13 +230,6 @@
         <button type="submit" class="text-button">Save ➔</button>
         <button type="reset" class="text-button" onclick="toggleEditing(event)">Cancel ✘</button>
       </form>
-    </div>
-  </template>
-
-  <template id="msg-unknown">
-    <div class="message">
-      <h3>Unknown message type!</h3>
-      <dl></dl>
     </div>
   </template>
 
@@ -605,8 +605,24 @@
       el.querySelector('form [name=color]').defaultValue = data.color;
       return el;
     }
+    function buildBrokenMessageElement(data) {
+      var template = document.querySelector('template#msg-unknown');
+      var el = template.content.cloneNode(true).querySelector('*');
+      for (var prop of Object.keys(data)) {
+        var dt = document.createElement('dt');
+        var dd = document.createElement('dd');
+        dt.innerText = prop;
+        dd.innerText = JSON.stringify(data[prop]);
+        el.querySelector('dl').appendChild(dt);
+        el.querySelector('dl').appendChild(dd);
+      }
+      return el
+    }
     function buildMessageElement(data) {
-      var template = document.querySelector('template#msg-'+data.type) || document.querySelector('template#msg-unknown');
+      var template = document.querySelector('template#msg-'+data.type)
+      if (!template) {
+        return buildBrokenMessageElement(data)
+      }
       var el = template.content.cloneNode(true).querySelector('*');
       el.id = data._id;
       el.dataset.rev = data._rev;
@@ -616,10 +632,12 @@
       } 
       if (data.type === 'text') {
         if (!['_id','_rev','_user','type','content','who'].every(function (x) { return x in data })) {
-          throw new Error(`Invalid keys on message ${data._id}: ${Object.keys(data)}`)
+          return buildBrokenMessageElement(data)
         }
         el.dataset.who = data.who;
-        if (!data.who) throw new Error(`Invalid chara on message ${data._id}`)
+        if (!data.who) {
+          return buildBrokenMessageElement(data)
+        }
         el.classList.add(data.who);
         el.querySelector('form [name=_id]').value = data._id;
         el.querySelector('form [name=type]').value = data.type;
@@ -628,18 +646,11 @@
         el.querySelector('blockquote').innerHTML = formatRpMessage(data.content);
       } else if (data.type === 'image') {
         if (!['_id','_rev','_user','type','url'].every(function (x) { return x in data })) {
-          throw new Error(`Invalid keys on message ${data._id}: ${Object.keys(data)}`)
+          return buildBrokenMessageElement(data)
         }
         el.querySelector('img').src = data.url;
       } else {
-        for (var prop of Object.keys(data)) {
-          var dt = document.createElement('dt');
-          var dd = document.createElement('dd');
-          dt.innerText = prop;
-          dd.innerText = JSON.stringify(data[prop]);
-          el.querySelector('dl').appendChild(dt);
-          el.querySelector('dl').appendChild(dd);
-        }
+        return buildBrokenMessageElement(data)
       }
       return el;
     }
