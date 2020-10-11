@@ -19,9 +19,21 @@ self.addEventListener('push', function (event) {
   if (data.test === 'ok') {
     return event.waitUntil(self.registration.showNotification('Subscribed to RPNow push notifications'))
   } else if (data.update) {
-    return event.waitUntil(self.registration.showNotification('New RP Message', {
-      actions: [{ action: `open ${data.update.databaseId}`, title: 'Read' }]
-    }))
+    var promise = clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    })
+    .then(function(clientList) {
+      return clientList.find(c => c.visibilityState === 'visible' && c.url.includes(data.update.databaseId))
+    })
+    .then(function (client) {
+      if (client) return null;
+      else return self.registration.showNotification('New RP Message', {
+        actions: [{ action: `open ${data.update.databaseId}`, title: 'Read' }]
+      })
+    });
+
+    event.waitUntil(promise);
   }
 })
 
