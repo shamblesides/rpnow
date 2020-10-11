@@ -32,7 +32,12 @@ window.RP = (function() {
     }
   }());
 
-  exports.initialize = function initialize(roomid, page, callbacks) {
+  exports.initialize = function initialize(_databaseId, page, callbacks) {
+    databaseId = _databaseId;
+    if (!databaseId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
+      throw new Error('The URL for this RP has changed. Go back to your dashboard.')
+    }
+
     var onready = callbacks.ready;
     var onmsg = callbacks.msg;
     var onchara = callbacks.chara;
@@ -40,9 +45,6 @@ window.RP = (function() {
     var onpagecount = callbacks.pageCount;
     var onerror = callbacks.error;
 
-    dbArgs = (roomid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i))
-      ? { databaseId: roomid }
-      : { databaseName: roomid };
 
     initPromise = userbase.init({
       appId: '630241a7-b753-44d0-a7de-358fe646cc27',
@@ -53,23 +55,26 @@ window.RP = (function() {
         throw new Error('You are not logged in!')
       }
       myUsername = session.user.username;
-      return userbase.getDatabases(dbArgs)
+      return userbase.getDatabases({ databaseId: databaseId })
       .then(function (results) {
         if (results.databases.length === 0) {
           throw new Error('RP Not Found');
         }
-        databaseId = results.databases[0].databaseId
+        dbArgs = results.databases[0].isOwner
+          ? { databaseName: results.databases[0].databaseName }
+          : { databaseId: databaseId }
         auxAuthToken = session.user.authToken
       })
     })
     .then(function () {
+      var rpMetaDocId = dbArgs.databaseName || dbArgs.databaseId;
       var rpMetaDoc = null
       var metaDbOpenPromise = userbase.openDatabase({
         databaseName: 'dashboard-cache',
         changeHandler(changes) {
           if (rpMetaDoc) return
           var change = changes.find(function (change) {
-            return change.itemId === roomid
+            return change.itemId === rpMetaDocId
           })
           if (change) {
             rpMetaDoc = change.item
@@ -117,7 +122,7 @@ window.RP = (function() {
                     rpMetaDoc = {}
                   }
                   rpMetaDoc.title = change.item
-                  userbase[method]({ databaseName: 'dashboard-cache', itemId: roomid, item: rpMetaDoc })
+                  userbase[method]({ databaseName: 'dashboard-cache', itemId: rpMetaDocId, item: rpMetaDoc })
                 })
               } else if (change.itemId.startsWith('m-')) {
                 if (!isFirstUpdate && !previousObjectReferences.has(change.itemId)) {

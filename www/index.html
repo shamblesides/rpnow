@@ -287,7 +287,7 @@
               }
               var id = databaseMeta.isOwner ? databaseMeta.databaseName : databaseMeta.databaseId;
               var colors = colorsForString(databaseMeta.databaseName)
-              roomInfos.push({ id: id, colors: colors })
+              roomInfos.push({ id: id, url: databaseMeta.databaseId, colors: colors })
             })
             return roomInfos
           })
@@ -298,7 +298,7 @@
           }
           roomInfos.forEach(function (info) {
             var el = template.content.cloneNode(true).querySelector('*');
-            el.querySelector('a').href = `/rp.html?room=${info.id}`;
+            el.querySelector('a').href = `/rp.html?room=${info.url}`;
             Object.assign(el.style, info.colors)
             var h3 = el.querySelector('h3');
             metaDbOpenPromise.then(function () {
