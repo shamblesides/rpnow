@@ -91,10 +91,6 @@
         <input type="checkbox" id="quicksend" data-persist="quicksend"/>
       </label>
       <label>
-        🔈 Audio Alerts
-        <input type="checkbox" id="audio-alerts" data-persist="audioAlerts"/>
-      </label>
-      <label>
         🔔 Push notifications
         <input type="checkbox" id="push-notifications" data-persist="pushNotifications" onchange="togglePushNotifications(event)"/>
       </label>
@@ -780,14 +776,6 @@
           if (wasAtBottom && !pagenum) {
             window.scrollBy(0, 999999);
           }
-
-          // we play an alert if...
-          var isVisible = document.visibilityState === 'visible';
-          if (!isVisible) {
-            if (('alertNoise' in window) && (document.getElementById('audio-alerts') || {}).checked) { // might not have loaded yet!
-              alertNoise.play();
-            }
-          }
         }
       },
       error(err, willRetry) {
@@ -795,11 +783,5 @@
         setError(err);
       }
     })
-  </script>
-
-  <!-- alert audio -->
-  <script src="/libraries/howler.core.min.js"></script>
-  <script>
-    var alertNoise = new Howl({ src: ['ding.mp3'] });
   </script>
 </body>
