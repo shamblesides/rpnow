@@ -1,4 +1,7 @@
 window.RP = (function() {
+  var AUX_URL = 'https://rpnow-aux.herokuapp.com'
+  var AUX_URL = 'http://localhost:13002'
+
   var exports = {};
 
   var PAGE_SIZE = exports.PAGE_SIZE = 20;
@@ -6,9 +9,10 @@ window.RP = (function() {
 
   var myUsername;
   var dbArgs;
+  var databaseId;
+  var auxAuthToken;
   
   var initPromise;
-  var auxWS;
 
   var lastChanges = null;
 
@@ -27,24 +31,6 @@ window.RP = (function() {
       return prefix + date + num + rand;
     }
   }());
-
-  function runAuxWebsocket(authToken, dbId) {
-    var wsURL = 'wss://rpnow-aux.herokuapp.com'
-    // var wsURL = 'ws://localhost:13002'
-
-    auxWS = new WebSocket(wsURL)
-    auxWS.onopen = function() {
-      auxWS.send(authToken + ' ' + dbId)
-    }
-    auxWS.onmessage = function(evt) {
-      console.log('received typing notification:', evt.data)
-    }
-    auxWS.onclose = function(evt) {
-      setTimeout(function () {
-        runAuxWebsocket(authToken)
-      }, 60 * 1000)
-    }
-  }
 
   exports.initialize = function initialize(roomid, page, callbacks) {
     var onready = callbacks.ready;
@@ -72,8 +58,8 @@ window.RP = (function() {
         if (results.databases.length === 0) {
           throw new Error('RP Not Found');
         }
-        var dbId = results.databases[0].databaseId
-        runAuxWebsocket(session.user.authToken, dbId)
+        databaseId = results.databases[0].databaseId
+        auxAuthToken = session.user.authToken
       })
     })
     .then(function () {
@@ -214,13 +200,16 @@ window.RP = (function() {
     });
   }
 
-  exports.startTyping = function startTyping() {
-    auxWS.send('typing')
-  }
-
   exports.sendMessage = function sendMessage(data, callback, failCallback) {
     upsert('m-', data, callback, failCallback);
-    auxWS.send('message')
+    fetch(AUX_URL + '/message', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Token': auxAuthToken,
+        'X-Database-Id': databaseId,
+      },
+    })
   }
 
   exports.sendChara = function sendChara(data, callback) {
@@ -426,9 +415,30 @@ window.RP = (function() {
     a.click()
   }
 
-  exports.sendFcmToken = function sendFcmToken(token) {
-    initPromise.then(function() {
-      auxWS.send('fcm ' + token)
+  exports.setupNotifications = function setupNotifications() {
+    navigator.serviceWorker.register('notification-sw.js')
+    navigator.serviceWorker.ready.then(function (registration) {
+      initPromise.then(function() {
+        registration.active.postMessage({
+          action: 'setup',
+          url: AUX_URL+'/subscribe',
+          token: auxAuthToken
+        })
+      })
+    })
+  }
+
+  exports.stopNotifications = function stopNotifications() {
+    navigator.serviceWorker.ready.then(function (registration) {
+      registration.pushManager.getSubscription().then(function (subscription) {
+        if (subscription) {
+          subscription.unsubscribe().then(function () {
+            registration.showNotification('Notifications stopped')
+          })
+        } else {
+          registration.showNotification('Notifications were already stopped')
+        }
+      })
     })
   }
 

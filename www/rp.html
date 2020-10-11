@@ -94,6 +94,10 @@
         🔈 Audio Alerts
         <input type="checkbox" id="audio-alerts" data-persist="audioAlerts"/>
       </label>
+      <label>
+        🔔 Push notifications
+        <input type="checkbox" id="push-notifications" data-persist="pushNotifications" onchange="togglePushNotifications(event)"/>
+      </label>
       <hr/>
       <a href="format.html" target="_blank">
         🎀 View formatting info
@@ -467,6 +471,32 @@
       event.preventDefault()
       RP.downloadJSON()
     }
+
+    var notificationsSupported = ('serviceWorker' in navigator) && ('PushManager' in window)
+
+    function togglePushNotifications (event) {
+      if (event.target.checked) {
+        event.target.disabled = true
+        if (!notificationsSupported) {
+          event.target.checked = false
+          throw new Error('Browser not supported.')
+        }
+        event.target.indeterminate = true
+        Notification.requestPermission().then(function(permission) {
+          event.target.indeterminate = false
+          event.target.disabled = false
+          if (permission === 'granted') {
+            RP.setupNotifications()
+          } else {
+            event.target.checked = false
+            window.onerror(new Error("You didn't allow notifications. You'll need to fix this in your browser settings."))
+          }
+        })
+      } else {
+        if (!notificationsSupported) return
+        RP.stopNotifications()
+      }
+    }
   </script>
   
   <script>
@@ -771,38 +801,5 @@
   <script src="/libraries/howler.core.min.js"></script>
   <script>
     var alertNoise = new Howl({ src: ['ding.mp3'] });
-  </script>
-
-  <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-messaging.js"></script>
-  <script>
-    var firebaseConfig = {
-      apiKey: "AIzaSyDh8fmR0-iUvvO6GIbqvTOPxFwAolSe9CQ",
-      projectId: "rpnow-d2607",
-      messagingSenderId: "266004075056",
-      appId: "1:266004075056:web:989052fa24bf7e56de93f5"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-
-    var FCM = firebase.messaging();
-    FCM.usePublicVapidKey('BCzGDA_CpD5DFgYzI1QQHxsVJK4yZ4n8Vy0gHyULF0wDn68Oeu72gAsm_yh32wAeL8nCWW-WmvG0m3zqFiR5Dfg')
-
-    // var togglePushNotifications = function (event) {
-    //   event.target.indeterminate = false
-    //   event.target.disabled = false
-    //   var enabled = event.target.checked
-    // }
-    // if (!enabled) return; // TODO
-
-    FCM.getToken().then(function (currentToken) {
-      if (!currentToken) throw new Error('FCM token was null')
-      RP.sendFcmToken(currentToken)
-    }).catch(window.onerror);
-
-    FCM.onMessage(function(payload) {
-      console.log('[firebase-messaging-sw.js] Received foreground message ', payload);
-    })
   </script>
 </body>
