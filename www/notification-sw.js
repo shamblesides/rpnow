@@ -25,6 +25,24 @@ self.addEventListener('push', function (event) {
   }
 })
 
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close()
+
+  console.log(event.action)
+
+  if (event.action.startsWith('open ')) {
+    var roomId = event.action.substr(5)
+    var promise = clients.matchAll({ type: 'window' })
+    .then(function (clientList) {
+      var client = clientList.find(c => c.url.endsWith(`?room=${roomId}`))
+      if (client) return client.focus()
+      else if (clients.openWindow) return clients.openWindow(`/rp.html?room=${roomId}`)
+    })
+
+    return event.waitUntil(promise)
+  }
+})
+
 function setupSubscription(url, token) {
   self.registration.pushManager.getSubscription().then(function (existingSubscription) {
     if (existingSubscription) return existingSubscription
