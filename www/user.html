@@ -27,6 +27,7 @@
     <nav>
       <a href="/">&lt; Back</a>
     </nav>
+
     <h2>User profile</h2>
     <form onsubmit="changeUsername(event)">
       <label>
@@ -42,6 +43,7 @@
       </label>
       <button type="submit">Submit</button>
     </form>
+
     <h2>Change password</h2>
     <form onsubmit="changePassword(event)">
       <label>
@@ -57,6 +59,18 @@
       <br>
       <button type="submit">Submit</button>
     </form>
+
+    <h2>Pushover notifications</h2>
+    <p>If you want mobile push notifications, you can sign up for <a href="https://pushover.net/">pushover.net</a> and enter your code below:</p>
+    <p>But, if you just want browser notifications, then you don't need to do this.</p>
+    <form onsubmit="setPushoverKey(event)">
+      <label>
+        Pushover User Key:
+        <input name="pushoverKey" required>
+      </label>
+      <button type="submit">Submit</button>
+    </form>
+
     <h2>Delete account</h2>
     <p><strong>This will also delete every RP you started!</strong></p>
     <p>To delete your account, enter the following:</p>
@@ -70,6 +84,8 @@
   <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js?uncache=1"></script>
 
   <script>
+    var auxAuthToken;
+
     userbase.init({
       appId: '630241a7-b753-44d0-a7de-358fe646cc27',
       sessionLength: 365 * 24,
@@ -84,6 +100,8 @@
         `;
         return;
       }
+
+      auxAuthToken = session.user.authToken;
 
       document.querySelector('#loading').style.display = 'none'
       document.querySelector('#view').style.display = ''
@@ -102,6 +120,7 @@
 
       userbase.updateUser(args)
       .then(function () {
+        alert('Success')
         location.reload()
       })
       .catch(function (err) {
@@ -144,6 +163,35 @@
         document.querySelector('#loading').style.display = 'none'
         document.querySelector('#view').style.display = ''
       })
+    }
+
+    var AUX_URL = 'https://rpnow-aux.herokuapp.com'
+    // var AUX_URL = 'http://localhost:13002'
+
+    function setPushoverKey(event) {
+      event.preventDefault()
+      var key = event.target.elements.pushoverKey.value
+      document.querySelector('#loading').style.display = ''
+      document.querySelector('#view').style.display = 'none'
+
+      var xhr = new XMLHttpRequest()
+      xhr.open('POST', `${AUX_URL}/pushover`)
+      xhr.setRequestHeader('X-Token', auxAuthToken);
+      xhr.setRequestHeader('X-Pushover-Token', key);
+      xhr.onload = function () {
+        if (xhr.status.toString().startsWith('2')) {
+          alert('Success')
+          location.reload()
+        } else {
+          xhr.onerror()
+        }
+      }
+      xhr.onerror = function () {
+        alert(`Failed: ${xhr.status} ${xhr.statusText} ${xhr.responseText}`)
+        document.querySelector('#loading').style.display = 'none'
+        document.querySelector('#view').style.display = ''
+      }
+      xhr.send();
     }
   </script>
 </body>
