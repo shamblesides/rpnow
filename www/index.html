@@ -415,7 +415,11 @@
         });
       })
       .then(function () {
-        window.location.href = `/rp.html?room=${rpid}`;
+        return userbase.getDatabases({ databaseName: rpid })
+      })
+      .then(function (result) {
+        var room = result.databases[0].databaseId
+        window.location.href = `/rp.html?room=${room}`;
       })
       .catch(function (err) {
         alert(err.message);
@@ -544,7 +548,11 @@
         })
       })
       .then(function () {
-        window.location.href = `/rp.html?room=${rpid}`;
+        return userbase.getDatabases({ databaseName: rpid })
+      })
+      .then(function (result) {
+        var room = result.databases[0].databaseId
+        window.location.href = `/rp.html?room=${room}`;
       })
       .catch(function (err) {
         alert(err.message);
