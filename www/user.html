@@ -111,7 +111,13 @@
 
       var deleteText = `delete ${session.user.username} forever`
       document.querySelector('#delete-text').innerText = deleteText
-      document.querySelector('input[name=confirmDelete]').pattern = deleteText
+      document.querySelector('input[name=confirmDelete]').addEventListener("input", function (event) {
+        if (event.target.value === deleteText) {
+          event.target.setCustomValidity("");
+        } else {
+          event.target.setCustomValidity("Text does not exactly match.");
+        }
+      });
     })
 
     function updateAndReload(args) {
@@ -149,6 +155,7 @@
     function deleteAccount(event) {
       event.preventDefault()
       if (!confirm('Really delete your account forever?')) return;
+      if (!confirm("All the RP's you created will be deleted too! Are you sure?")) return;
 
       document.querySelector('#loading').style.display = ''
       document.querySelector('#view').style.display = 'none'
