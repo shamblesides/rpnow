@@ -8,15 +8,15 @@
       "type": "image/png"
     },
     {
+      "src": "/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
       "src": "/app-icon-maskable.png",
       "sizes": "196x196",
       "type": "image/png",
       "purpose": "any maskable"
-    },
-    {
-      "src": "/app-splash.png",
-      "sizes": "512x512",
-      "type": "image/png"
     }
   ],
   "name": "RPNow",
