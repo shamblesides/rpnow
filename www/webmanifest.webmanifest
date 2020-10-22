@@ -12,11 +12,6 @@
       "sizes": "196x196",
       "type": "image/png",
       "purpose": "any maskable"
-    },
-    {
-      "src": "/app-splash.png",
-      "sizes": "3600x3600",
-      "type": "image/png"
     }
   ],
   "name": "RPNow",
