@@ -15,7 +15,7 @@
     },
     {
       "src": "/app-splash.png",
-      "sizes": "3600x3600",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ],
