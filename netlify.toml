@@ -1,2 +1,7 @@
 [build]
   publish = "www/"
+
+[[redirects]]
+  from = "/rp/*"
+  to = "/old_rp_info.html"
+  status = 302
