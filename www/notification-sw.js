@@ -3,6 +3,11 @@ self.addEventListener('activate', function () {
   console.log('RP Service Worker installed!')
 })
 
+self.addEventListener('fetch', event => {
+  // not useful, but required to meet "installable" criteria
+  console.log(`fetching ${event.request.url}`);
+})
+
 self.addEventListener('message', function (event) {
   console.log(event.data)
 
