@@ -250,6 +250,13 @@
   </script>
 
   <script>
+    // service worker support - should be on index, rp page, and maybe others later
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('notification-sw.js')
+    }
+  </script>
+
+  <script>
     function openPopup(id) {
       document.getElementById(id).classList.toggle('open');
       document.getElementById(id).querySelector('button,input,a').focus();
@@ -468,7 +475,7 @@
       RP.downloadJSON()
     }
 
-    var notificationsSupported = ('serviceWorker' in navigator) && ('PushManager' in window)
+    var notificationsSupported = 'PushManager' in window;
 
     function togglePushNotifications (event) {
       if (event.target.checked) {

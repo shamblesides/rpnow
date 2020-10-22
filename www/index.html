@@ -207,6 +207,13 @@
     </li>
   </template>
 
+  <script>
+    // service worker support - should be on index, rp page, and maybe others later
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('notification-sw.js')
+    }
+  </script>
+
   <!-- application code -->
   <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js?uncache=1"></script>
   <script type="text/javascript">

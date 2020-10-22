@@ -421,7 +421,6 @@ window.RP = (function() {
   }
 
   exports.setupNotifications = function setupNotifications() {
-    navigator.serviceWorker.register('notification-sw.js')
     navigator.serviceWorker.ready.then(function (registration) {
       initPromise.then(function() {
         registration.active.postMessage({
