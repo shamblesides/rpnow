@@ -158,6 +158,10 @@
         </form>
       </details>
     </div>
+
+    <footer id="pwease" style="display:none">
+      <a href="https://www.patreon.com/rpnow?fan_landing=true" target="_blank">Can you help keep RPNow online and ad-free for everyone? Even $1 per month helps.</a>
+    </footer>
   </section>
   
   <main>
@@ -253,6 +257,15 @@
     // service worker support - should be on index, rp page, and maybe others later
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('notification-sw.js')
+    }
+  </script>
+
+  <script>
+    // Show the donation prompt sometimes
+    if (Math.random() < 0.5) {
+      document.getElementById('pwease').style.display = '';
+    } else {
+      document.getElementById('pwease').remove();
     }
   </script>
 
