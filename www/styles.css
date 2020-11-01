@@ -664,6 +664,10 @@ main {
 }
 
 /***** CHARA DRAWER specific styles *****/
+.chara-row label > * {
+  margin-top: 0;;
+  vertical-align: middle;
+}
 .chara-row.editing {
   background-color: rgba(128,128,128,0.2);
 }
