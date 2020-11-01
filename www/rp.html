@@ -220,6 +220,9 @@
     <div class="chara-row">
       <label>
         <input type="radio" form="send-box" name="who" onchange="selectSpeaker(this.value)">
+        <button onclick="openAvatarDialog(event)">
+          <img width="20" height="20" />
+        </button>
         <span class="chara-name"></span>
         <button class="edit-button icon-button" onclick="toggleEditing(event)">✎</button>
       </label>
@@ -244,6 +247,33 @@
       <td><input type="checkbox" class="share-checkbox" onchange="setSharePermission(event)"></td>
       <td><button type="button" class="uninvite-button text-button" style="padding:2px;width:unset" onclick="confirmUninvite(event)">Uninvite</td>
     </tr>
+  </template>
+
+  <template id="avatar-dialog">
+    <div class="dialog avatar-dialog">
+      <h3>Avatars</h3>
+      <ul>
+        <li>
+          <label>
+            <input type="radio" form="send-box" name="avatar" value="" onchange="selectAvatar(this.value)">
+            Narrator
+          </label>
+        </li>
+        <li>
+          <input type="file" required accept="image/*" multiple>
+          <button>ADD AVATAR</button>
+        </li>
+      </ul>
+    </div>
+  </template>
+
+  <template id="avatar-radio">
+    <li>
+      <label>
+        <input type="radio" form="send-box" name="avatar" onchange="selectAvatar(this.value)">
+        <img width=60>
+      </label>
+    </li>
   </template>
 
   <script>
@@ -353,6 +383,10 @@
       if (username != null) {
         RP.inviteUser(username);
       }
+    }
+    function openAvatarDialog(event) {
+      var charaId = event.target.closest('.chara-row').id;
+      openPopup(`avatar-dialog-${charaId}`);
     }
     function openParticipantsDialog() {
       openPopup('participants-dialog');
@@ -651,6 +685,19 @@
       el.querySelector('form [name=color]').defaultValue = data.color;
       return el;
     }
+    function buildAvatarDialog(charaData) {
+      var el = document.querySelector('template#avatar-dialog').content.cloneNode(true).querySelector('*');
+      el.classList.add(charaData._id)
+      el.id = `avatar-dialog-${charaData._id}`;
+      return el;
+    }
+    function buildAvatarRadio(avatarData) {
+      var el = document.querySelector('template#avatar-radio').content.cloneNode(true).querySelector('*');
+      var radio = el.querySelector('input[type=radio]')
+      radio.value = avatarData._id;
+      el.id = `avatar-radio-${avatarData._id}`;
+      return el;
+    }
     function buildBrokenMessageElement(data) {
       var template = document.querySelector('template#msg-unknown');
       var el = template.content.cloneNode(true).querySelector('*');
@@ -766,7 +813,12 @@
       chara(data) {
         var style = charaStyles(data);
         addTo(style, document.head);
-        
+
+        if (!document.querySelector(`.avatar-dialog.${data._id}`)) {
+          var avatarDialog = buildAvatarDialog(data);
+          document.body.insertBefore(avatarDialog, document.getElementById('main-menu'))
+        }
+
         var menu = document.querySelector('#character-menu .drawer-body');
         if (menu) {
           var el = buildCharaButton(data);
@@ -775,6 +827,12 @@
             el.querySelector('input[type=radio]').checked = true;
           }
         }
+      },
+      avatar(data) {
+        var radio = buildAvatarRadio(data);
+        var ul = document.querySelector(`.avatar-dialog.${data._id} ul`);
+        var li = ul.querySelector('li');
+        addTo(radio, ul, li);
       },
       msg(data, isInit) {
         var wasAtBottom =

@@ -41,6 +41,7 @@ window.RP = (function() {
     var onready = callbacks.ready;
     var onmsg = callbacks.msg;
     var onchara = callbacks.chara;
+    var onavatar = callbacks.avatar;
     var ontitle = callbacks.title;
     var onpagecount = callbacks.pageCount;
     var onerror = callbacks.error;
@@ -158,6 +159,14 @@ window.RP = (function() {
                 }
                 Object.assign(obj, change.item);
                 onchara(obj, isFirstUpdate);
+              } else if (change.itemId.startsWith('a-')) {
+                var obj = {
+                  _id: change.itemId,
+                  _user: (change.updatedBy || change.createdBy).username,
+                  _rev: +!!change.updatedBy,
+                }
+                Object.assign(obj, change.item);
+                onavatar(obj, isFirstUpdate);
               }
               previousObjectReferences.set(change.itemId, change.item);
             })
@@ -192,7 +201,7 @@ window.RP = (function() {
 
     var method = isUpdate ? 'updateItem' : 'insertItem';
 
-    userbase[method](Object.assign({
+    return userbase[method](Object.assign({
       itemId: itemId,
       item: item,
     }, dbArgs))
@@ -200,8 +209,8 @@ window.RP = (function() {
       if (failCallback) failCallback(err);
       return alertError(err);
     })
-    .then(function (data) {
-      if (callback) callback(data);
+    .then(function () {
+      if (callback) callback();
     });
   }
 
@@ -219,6 +228,18 @@ window.RP = (function() {
 
   exports.sendChara = function sendChara(data, callback) {
     upsert('c-', data, callback);
+  }
+
+  exports.sendAvatar = function sendAvatar(data, callback) {
+    var file = data.file;
+    if ('file' in data) delete data.file;
+    upsert('a-', data)
+    .then(function () {
+      console.log(data);
+    })
+    .then(function () {
+      if (callback) callback();
+    });
   }
 
   exports.changeTitle = function changeTitle(title) {
