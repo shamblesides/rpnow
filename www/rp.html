@@ -29,6 +29,9 @@
 
   <form id="send-box" class="chara-bg" onsubmit="sendMessage(event)" data-page="chat">
     <input type="hidden" name="type" value="text">
+    <button type="button" id="avatar-button" onclick="openAvatarDialog(event)">
+      <img width="20" height="20" />
+    </button>
     <button type="button" class="change-chara chara-name" onclick="openPopup('character-menu')"></button>
     <button type="button" class="icon-button" onclick="openPopup('image-dialog')">🖼️</button>
     <textarea name="content" rows="3" maxlength="10000" placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist-room="sendBoxText"></textarea>
@@ -220,9 +223,6 @@
     <div class="chara-row">
       <label>
         <input type="radio" form="send-box" name="who" onchange="selectSpeaker(this.value)">
-        <button onclick="openAvatarDialog(event)">
-          <img width="20" height="20" />
-        </button>
         <span class="chara-name"></span>
         <button class="edit-button icon-button" onclick="toggleEditing(event)">✎</button>
       </label>
@@ -256,7 +256,7 @@
         <li>
           <label>
             <input type="radio" form="send-box" name="avatar" value="" onchange="selectAvatar(this.value)">
-            Narrator
+            None
           </label>
         </li>
         <li>
@@ -357,6 +357,10 @@
       var form = document.querySelector('#send-box')
       form.className = 'chara-bg '+speaker;
       form.elements.who.value = speaker;
+      if (speaker.startsWith('c-')) {
+        // select the first avatar button, which will be "none"
+        document.querySelector(`.avatar-dialog.${speaker} input[type=radio]`).checked = true;
+      }
     }
     function openTitleDialog() {
       var title = prompt('Enter the title for this RP:', document.getElementById('title').innerText);
@@ -385,7 +389,7 @@
       }
     }
     function openAvatarDialog(event) {
-      var charaId = event.target.closest('.chara-row').id;
+      var charaId = event.target.closest('form').elements.who.value;
       openPopup(`avatar-dialog-${charaId}`);
     }
     function openParticipantsDialog() {
@@ -689,6 +693,7 @@
       var el = document.querySelector('template#avatar-dialog').content.cloneNode(true).querySelector('*');
       el.classList.add(charaData._id)
       el.id = `avatar-dialog-${charaData._id}`;
+      el.querySelector('h3').innerText = `Avatars - ${charaData.name}`;
       return el;
     }
     function buildAvatarRadio(avatarData) {
@@ -737,6 +742,14 @@
         el.querySelector('form [name=who]').value = data.who;
         el.querySelector('form [name=content]').defaultValue = data.content;
         el.querySelector('blockquote').innerHTML = formatRpMessage(data.content);
+        if (data.who.startsWith('c')) {
+          data.avatar = 'https://s3.amazonaws.com/ganbreederpublic/imgs/d9040be4f39da1a55fdf.jpeg';
+        }
+        if (data.avatar) {
+          var img = document.createElement('img');
+          img.src = data.avatar;
+          el.querySelector('blockquote').prepend(img);
+        }
       } else if (data.type === 'image') {
         if (!['_id','_rev','_user','type','url'].every(function (x) { return x in data })) {
           return buildBrokenMessageElement(data)

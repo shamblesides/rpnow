@@ -289,18 +289,30 @@ main {
   box-shadow: 2px 2px 4px rgba(0,0,0,0.03);
 }
 .message[data-who|=c] blockquote {
-  background-color: white;
+  background-color: rgba(255,255,255, 0.8);
   color: black;
-  opacity: 0.8;
   border: solid 1px;
   border-radius: 12px 12px 12px 0;
   border-color: inherit;
   padding: 8px;
 }
+.message[data-who|=c] blockquote:after {
+  /* self-clearfix */
+  content: "";
+  clear: both;
+  display: table;
+}
 .dark-theme .message[data-who|=c] blockquote {
-  background-color: black;
+  background-color: rgba(0,0,0, 0.6);
   color: white;
-  opacity: 0.6;
+}
+.message[data-who|=c] blockquote img {
+  float: left;
+  width: 100px;
+  height: 100px;
+  margin-right: 6px;
+  object-fit: cover;
+  border-top-left-radius: 5px;
 }
 /** O O C **/
 .message[data-who=ooc] {
@@ -369,6 +381,9 @@ main {
 }
 #send-box.narrator, #send-box.ooc {
   background: inherit;
+}
+#send-box.narrator #avatar-button, #send-box.ooc #avatar-button {
+  display: none;
 }
 
 @media (max-width: 719px) {
