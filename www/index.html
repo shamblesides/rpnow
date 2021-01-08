@@ -110,6 +110,22 @@
       display: inline-block;
       width: 150px;
     }
+    aside.error {
+      display: block;
+      position: fixed;
+      top: 40px;
+      left: 0;
+      right: 0;
+      margin: auto;
+      max-width: 300px;
+      padding: 20px;
+      color: white;
+      background-color: orange;
+      z-index: 35;
+    }
+    aside.error:empty {
+      display: none;
+    }
   </style>
 </head>
 
@@ -119,6 +135,9 @@
     <h1>RPNow</h1>
   </header>
 
+  <aside class="error">JavaScript is required for this page to work!</aside>
+  <script>document.querySelector('aside.error').innerText = ''</script>
+  
   <div id="loading-view">Loading...</div>
 
   <div id="auth-view" style="display:none">
@@ -138,7 +157,6 @@
     <p>
       You are logged in as <a href="user.html" id="username"></a>.
       <button type="button" onclick="handleLogout()">Log out</button>
-      <div id="logout-error"></div>
     </p>
 
     <div id="top-buttons">
@@ -191,7 +209,6 @@
     <h2>My RPs</h2>
     <ul id="rp-list" class="rp-list"></ul>
     <div id="db-loading">Loading RP list...</div>
-    <div id="db-error"></div>
     
     <details id="hidden-rps" style="display: none; border: none">
       <summary><b>Hidden RPs</b></summary>
@@ -209,6 +226,14 @@
   </template>
 
   <script>
+    function setError(error) {
+      document.querySelector('aside.error').innerText = (error.reason || error || '').toString();
+    }
+    window.onerror = setError
+    window.onunhandledrejection = setError
+  </script>
+
+  <script>
     // service worker support - should be on index, rp page, and maybe others later
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('notification-sw.js')
@@ -218,6 +243,10 @@
   <!-- application code -->
   <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js?uncache=1"></script>
   <script type="text/javascript">
+    function onreject (err) {
+      setError(err);
+      throw err;
+    }
     var loadingView = document.getElementById('loading-view');
     var dashboardView = document.getElementById('dashboard-view')
     var authView = document.getElementById('auth-view');
@@ -233,6 +262,7 @@
         showAuth();
       }
     })
+    .catch(onreject)
 
     function showAuth() {
       dashboardView.style.display = 'none'
@@ -243,9 +273,7 @@
     function handleLogout() {
       userbase.signOut().then(function () {
         showAuth();
-      }).catch(function (err) {
-        document.getElementById('logout-error').innerText = err;
-      });
+      }).catch(onreject);
     }
 
     var friendDbOpenPromise
@@ -259,7 +287,6 @@
       document.getElementById('username').innerText = user.username
       document.getElementById('rp-list').innerText = ''
       document.getElementById('db-loading').style.display = 'block'
-      document.getElementById('db-error').innerText = ''
 
       friendDbOpenPromise = userbase.openDatabase({
         databaseName: 'trusted-inviters',
@@ -367,10 +394,7 @@
           });
           document.getElementById('db-loading').style.display = 'none';
         })
-        .catch(function (err) {
-          document.getElementById('db-error').innerText = err
-          throw err;
-        })
+        .catch(onreject)
     }
 
     function addFriend(event) {
@@ -391,10 +415,10 @@
         if (err.name === 'ItemAlreadyExists') {
           alert(`Already accepting invites from ${friendUsername}`)
         } else {
-          alert(err.message)
           throw err
         }
       })
+      .catch(onreject)
     }
 
     function removeFriend(friendUsername) {
@@ -408,9 +432,8 @@
       }).catch(function (err) {
         dashboardView.style.display = '';
         loadingView.style.display = 'none';
-        alert(err.message)
         throw err
-      })
+      }).catch(onreject)
     }
 
     function createRP() {
