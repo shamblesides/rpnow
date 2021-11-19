@@ -1,5 +1,5 @@
 window.RP = (function() {
-  var AUX_URL = 'https://rpnow-aux.herokuapp.com'
+  var AUX_URL = 'https://rpnow.nfshost.com'
   // var AUX_URL = 'http://localhost:13002'
 
   var exports = {};
