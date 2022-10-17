@@ -1,0 +1,45 @@
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL,
+    passhash TEXT NOT NULL,
+    email TEXT,
+    pushover_key TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+
+CREATE TABLE accept_invites (
+    my_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    from_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (my_id, from_id));
+
+CREATE TABLE rooms (
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+
+CREATE TABLE participating_in (
+    id INTEGER PRIMARY KEY,
+    roomid INTEGER NOT NULL,
+    userid INTEGER NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    parent_node INTEGER NOT NULL REFERENCES participating_in(id) ON DELETE CASCADE,
+    invited_by INTEGER NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (roomid, userid));
+
+CREATE TABLE charas (
+    id INTEGER PRIMARY KEY,
+    roomid INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    nick TEXT NOT NULL,
+    color TEXT NOT NULL,
+    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+
+CREATE TABLE messages (
+    id INTEGER PRIMARY KEY,
+    roomid INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    subkind TEXT NULL,
+    content TEXT NOT NULL,
+    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
