@@ -20,8 +20,7 @@
     </a>
     and try again
   </noscript>
-  <div id="loading">Loading</div>
-  <form style="display:none" action="javascript:;" onsubmit="handleLogin(event)">
+  <form method="post" onsubmit="handleLogin(event)">
     <h1 data-register>Create account</h1>
     <h1 data-login>Log in</h1>
 
@@ -30,9 +29,8 @@
     <input data-register name="password" type="password" required placeholder="Password" autocomplete="new-password">
     <input data-register name="email" type="email" placeholder="Email (optional)" autocomplete="email">
 
-    <div data-register><br>You will only be able to reset your password if you provide an e-mail address,
-      <strong>and make the reset request from a device you've signed in with before!</strong>
-      So, choose a password you will remember, or store it somewhere safe.
+    <div data-register><br>You will only be able to reset your password if you provide an e-mail address!
+      Otherwise, choose a password you will remember, or store it somewhere safe.
     </div>
 
     <br>
@@ -46,13 +44,14 @@
     <br>
     <br>
 
-    <input type="submit">
+    <input data-login type="submit" formaction="login.lua" value="Log in">
+    <input data-register type="submit" formaction="register.lua" value="Register">
   </form>
   <div id="error"></div>
 
-  <p data-login>
+  <!-- <p data-login>
     Forgot password? <button type="button" onclick="forgotPassword()">Send reset e-mail</button>
-  </p>
+  </p> -->
 
   <p data-login>
     New user? <a href="/login.html?signUp">Create an account</a>
@@ -63,9 +62,6 @@
   </p>
 
   <script>
-    var submitButton = document.querySelector('input[type=submit]');
-    var errorText = document.querySelector('#error');
-
     var isRegister = (location.search === '?signUp')
     if (isRegister) {
       Array.from(document.querySelectorAll('[data-login]'))
@@ -76,75 +72,25 @@
       .forEach(function (el) { el.remove() })
       document.title = 'Log in'
     }
+
+    var submitButton = document.querySelector('input[type=submit]');
+    var errorText = document.querySelector('#error');
   </script>
-  <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js?uncache=1"></script>
 
   <script>
-    userbase.init({
-      appId: '630241a7-b753-44d0-a7de-358fe646cc27',
-      sessionLength: 365 * 24,
-    })
-    .then(function (session) {
-      if (session.user) {
-        document.body.innerHTML = `
-        <h1>Already logged in</h1>
-        <ul>
-          <li>
-            <a href="/">View dashboard</a>
-          </li>
-          <li>
-            <button onclick="handleLogout(event)">Log out</button>
-          </li>
-        </ul>
-        `;
-      } else {
-        document.querySelector('#loading').style.display = 'none'
-        document.querySelector('form').style.display = ''
-      }
-    })
     function handleLogin(e) {
-      e.preventDefault()
-
-      var form = e.target;
-      var errorText = form.nextElementSibling;
-      errorText.innerText = '';
-
-      var rememberMe = form.elements.rememberMe.checked
-      var params = {
-        username: form.elements.username.value,
-        password: form.elements.password.value,
-        rememberMe: rememberMe ? 'local' : 'session',
-      }
-      if (rememberMe) params.sessionLength = 365 * 24;
       if (isRegister) {
-        params.email = form.elements.email.value;
-        if (!params.email) {
+        if (!e.target.elements.email.value) {
           var proceedWithoutEmail = confirm("Without an e-mail address, you will be unable to reset your password! If you lose your password, you will be unable to recover your data.\n\nContinue?")
-          if (!proceedWithoutEmail) return;
+          if (!proceedWithoutEmail) {
+            event.preventDefault();
+            return;
+          }
         }
       }
-
-      submitButton.disabled = true;
-
-      var method = isRegister ? 'signUp' : 'signIn'
-      userbase[method](params).then(function () {
-        location.href = '/';
-      })
-      .catch(function (err) {
-        submitButton.disabled = false;
-        errorText.innerText = err
-      })
     }
 
-    function handleLogout(event) {
-      event.target.disabled = true;
-      userbase.signOut().then(function () {
-        location.reload();
-      }).catch(function (err) {
-        alert(err.message);
-      });
-    }
-
+    /*
     function forgotPassword(e) {
       var form = document.querySelector('form')
       var previouslyEntered = form.elements.username.value;
@@ -158,5 +104,6 @@
         alert(err.message)
       })
     }
+    */
   </script>
 </body>

@@ -2,9 +2,16 @@ CREATE TABLE users (
     id INTEGER PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
     passhash TEXT NOT NULL,
-    email TEXT,
+    email TEXT NOT NULL,
     pushover_key TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+
+CREATE TABLE sessions (
+    id TEXT PRIMARY KEY,
+    userid INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    keyhash BLOB NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires INTEGER NOT NULL);
 
 CREATE TABLE accept_invites (
     my_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

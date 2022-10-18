@@ -1,10 +1,10 @@
 sqlite3 = require "lsqlite3"
 
-function ClientError(msg, loglevel)
+function ClientError(code, msg, loglevel)
     if loglevel ~= nil then
         Log(loglevel, string.format(msg))
     end
-    SetStatus(400, msg)
+    SetStatus(code, msg)
     SetHeader('Content-Type', 'text/plain')
     Write(msg..'\r\n')
     return msg
@@ -30,19 +30,69 @@ function EnforceMethod(allowed_methods)
     return false
 end
 
-function EnforceParams(exact_params)
+function EnforceParams(required_params, optional_params)
+    optional_params = optional_params or {}
     local params = GetParams()
-    if #params > #exact_params then
-        ClientError('too many params')
+    if #params > #required_params + #optional_params then
+        ClientError(400, 'too many params')
         return false
     end
-    for i,val in ipairs(exact_params) do
+
+    for i,val in ipairs(required_params) do
         if GetParam(val) == nil then
-            ClientError('Missing query param: %s' % {val})
+            ClientError(400, 'Missing query param: %s' % {val})
             return false
         end
     end
+
+    local remaining_params = #params - #required_params
+    for i,val in ipairs(optional_params) do
+        if HasParam(val) then
+            remaining_params = remaining_params - 1
+        end
+    end
+    if remaining_params ~= 0 then
+        ClientError(400, 'unknown param')
+        return false
+    end
+
     return true
+end
+
+function ValidateSession()
+    local sess = GetCookie("session")
+    if sess == nil then return nil end
+    if #sess > 32 + 1 + 64 then return nil end
+    local i0, i1, chunk1, chunk2 = string.find(sess, "^([%w/+]+):([%w/+]+)$")
+    if i0 == nil then return nil end
+    local stmt = assert(DB:prepare[[SELECT userid, keyhash, expires FROM sessions WHERE id = ?1]])
+    if stmt:bind_values(chunk1) ~= sqlite3.OK then
+        error("ValidateSession bind_values")
+    end
+    local res = stmt:step()
+    if res == sqlite3.DONE then
+        stmt:finalize()
+        return nil
+    elseif res ~= sqlite3.ROW then
+        stmt:finalize()
+        return InternalError(string.format("Internal error (stmt:step): %s", DB:errmsg()))
+    end
+    local userid = stmt:get_value(0)
+    local keyhash = DecodeBase64(stmt:get_value(1))
+    local expires = stmt:get_value(2)
+    stmt:finalize()
+    if os.time() > expires then
+        return nil
+    end
+    local hashdiff = 0
+    local myhash = Sha256(chunk2)
+    for i = 1, #keyhash do
+        hashdiff = hashdiff | (string.byte(keyhash, i) ~ string.byte(myhash, i))
+    end
+    if hashdiff ~= 0 then
+        return nil
+    end
+    return userid
 end
 
 function OnWorkerStart()

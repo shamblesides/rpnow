@@ -154,10 +154,10 @@
   </div>
 
   <div id="dashboard-view" style="display:none">
-    <p>
+    <form style="margin: 20px 0">
       You are logged in as <a href="user.html" id="username"></a>.
-      <button type="submit" formaction="/logout">Log out</button>
-    </p>
+      <input type="submit" formmethod="post" formaction="/logout.lua" value="Log out">
+    </form>
 
     <div id="top-buttons">
       <details>
@@ -247,7 +247,9 @@
         return response;
       } else {
         return response.text().then(function (text) {
-          throw new Error(text);
+          var err = new Error(text);
+          err.code = response.status;
+          throw err;
         })
       }
     }
@@ -262,11 +264,12 @@
     fetch('/dashboard.lua')
     .then(ok)
     .then(function (res) {return res.json()})
-    .then(function (session) {
-      if (session.user) {
-        showDashboard(session.user);
-      } else {
+    .then(showDashboard)
+    .catch(function (err) {
+      if (err.code === 401) {
         showAuth();
+      } else {
+        throw err;
       }
     })
     .catch(onreject)
