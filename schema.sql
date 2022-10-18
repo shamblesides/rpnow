@@ -1,6 +1,6 @@
 CREATE TABLE users (
     id INTEGER PRIMARY KEY,
-    username TEXT NOT NULL,
+    username TEXT NOT NULL UNIQUE,
     passhash TEXT NOT NULL,
     email TEXT,
     pushover_key TEXT,
