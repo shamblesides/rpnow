@@ -165,9 +165,9 @@
           <h2>Create RP</h2>
         </summary>
 
-        <button onclick="createRP()">
-          Start from scratch
-        </button>
+        <form action="new_rp.lua" method="post">
+          <input type="submit" value="Start from scratch">
+        </form>
 
         <p>or import a .json file:</p>
 
@@ -310,8 +310,8 @@
       }
       user.rooms.forEach(function (info) {
         var el = template.content.cloneNode(true).querySelector('*');
-        el.querySelector('a').href = `/rp.html?room=${info.url}`;
-        Object.assign(el.style, info.colors)
+        el.querySelector('a').href = `/rp.html?room=${info.id}`;
+        Object.assign(el.style, colorsForString(info.title + info.id))
         var h3 = el.querySelector('h3');
         h3.innerText = info.title;
         var hideButton = el.querySelector('.hide-button');
@@ -381,42 +381,6 @@
         loadingView.style.display = 'none';
         throw err
       }).catch(onreject)
-    }
-
-    function createRP() {
-      dashboardView.style.display = 'none';
-      loadingView.style.display = '';
-
-      var rpid = `rp-${Date.now().toString(36)}`;
-
-      var isEmpty = null;
-      userbase.openDatabase({
-        databaseName: rpid,
-        changeHandler(items) {
-          isEmpty = (items.length === 0);
-        }
-      })
-      .then(function () {
-        if (isEmpty !== true) {
-          throw new Error(`Failed to create RP: hasItems === ${isEmpty}`);
-        }
-        return userbase.insertItem({
-          databaseName: rpid,
-          itemId: 'title',
-          item: 'Untitled',
-        });
-      })
-      .then(function () {
-        return userbase.getDatabases({ databaseName: rpid })
-      })
-      .then(function (result) {
-        var room = result.databases[0].databaseId
-        window.location.href = `/rp.html?room=${room}`;
-      })
-      .catch(function (err) {
-        alert(err.message);
-        throw err;
-      })
     }
 
     function importRP(event) {

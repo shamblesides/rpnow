@@ -12,7 +12,7 @@ local stmt = assert(DB:prepare[[
     WHERE participating_in.userid = ?1
 ]])
 
-if stmt:bind_values(USERID) ~= sqlite3.OK then
+if stmt:bind_values(userid) ~= sqlite3.OK then
     stmt:finalize()
     return InternalError(string.format("Internal error (stmt:bind_values): %s", db:errmsg()))
 end
