@@ -90,19 +90,16 @@
         ⏩ Quick send
         <input type="checkbox" id="quicksend" data-persist="quicksend"/>
       </label>
-      <label>
+      <!-- <label>
         🔔 Push notifications
         <input type="checkbox" id="push-notifications" data-persist="pushNotifications" onchange="togglePushNotifications(event)"/>
-      </label>
+      </label> -->
       <hr/>
       <a href="format.html" target="_blank">
         🎀 View formatting info
       </a>
       <!-- <button onclick="openWebhookDialog()">
         🌐 Add Discord webhook...
-      </button>
-      <button onclick="openUsernameDialog()">
-        👤 Change my username...
       </button> -->
       <hr/>
       <details>
@@ -342,12 +339,6 @@
         })
       }
     }
-    function openUsernameDialog() {
-      var name = prompt('What will you, the writer, be known by?');
-      if (name != null) {
-        RP.changeMyUsername(name);
-      }
-    }
     function openInviteDialog() {
       var username = prompt('Enter the username you are inviting');
       if (username != null) {
@@ -490,29 +481,29 @@
 
     var notificationsSupported = 'PushManager' in window;
 
-    function togglePushNotifications (event) {
-      if (event.target.checked) {
-        event.target.disabled = true
-        if (!notificationsSupported) {
-          event.target.checked = false
-          throw new Error('Browser not supported.')
-        }
-        event.target.indeterminate = true
-        Notification.requestPermission().then(function(permission) {
-          event.target.indeterminate = false
-          event.target.disabled = false
-          if (permission === 'granted') {
-            RP.setupNotifications()
-          } else {
-            event.target.checked = false
-            window.onerror(new Error("You didn't allow notifications. You'll need to fix this in your browser settings."))
-          }
-        })
-      } else {
-        if (!notificationsSupported) return
-        RP.stopNotifications()
-      }
-    }
+    // function togglePushNotifications (event) {
+    //   if (event.target.checked) {
+    //     event.target.disabled = true
+    //     if (!notificationsSupported) {
+    //       event.target.checked = false
+    //       throw new Error('Browser not supported.')
+    //     }
+    //     event.target.indeterminate = true
+    //     Notification.requestPermission().then(function(permission) {
+    //       event.target.indeterminate = false
+    //       event.target.disabled = false
+    //       if (permission === 'granted') {
+    //         RP.setupNotifications()
+    //       } else {
+    //         event.target.checked = false
+    //         window.onerror(new Error("You didn't allow notifications. You'll need to fix this in your browser settings."))
+    //       }
+    //     })
+    //   } else {
+    //     if (!notificationsSupported) return
+    //     RP.stopNotifications()
+    //   }
+    // }
   </script>
   
   <script>
@@ -599,7 +590,6 @@
     }).bind(null, 0));
   </script>
 
-  <script type="text/javascript" src="https://sdk.userbase.com/2/userbase.js?uncache=1"></script>
   <script src="rp.js"></script>
   <script src="format-rp-message.js"></script>
 

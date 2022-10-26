@@ -16,34 +16,38 @@ CREATE TABLE sessions (
 CREATE TABLE accept_invites (
     my_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     from_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (my_id, from_id));
+    UNIQUE (my_id, from_id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 
 CREATE TABLE rooms (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
-    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 
 CREATE TABLE participating_in (
     roomid INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     userid INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (roomid, userid));
+    UNIQUE (roomid, userid),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 
 CREATE TABLE charas (
     id INTEGER PRIMARY KEY,
     roomid INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     nick TEXT NOT NULL,
     color TEXT NOT NULL,
-    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE SET NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at TEXT);
 
 CREATE TABLE messages (
-    id INTEGER PRIMARY KEY,
     roomid INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    num INTEGER NOT NULL,
+    rev INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (roomid, num, rev),
     kind TEXT NOT NULL,
     subkind TEXT NULL,
     content TEXT NOT NULL,
-    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);

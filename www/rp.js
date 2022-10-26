@@ -1,18 +1,10 @@
 window.RP = (function() {
-  var AUX_URL = 'https://rpnow.nfshost.com'
-  // var AUX_URL = 'http://localhost:13002'
-
   var exports = {};
 
   var PAGE_SIZE = exports.PAGE_SIZE = 20;
   var CHAT_SIZE = exports.CHAT_SIZE = 60;
 
-  var myUsername;
-  var dbArgs;
-  var databaseId;
-  var auxAuthToken;
-  
-  var initPromise;
+  var roomid;
 
   var lastChanges = null;
 
@@ -32,11 +24,8 @@ window.RP = (function() {
     }
   }());
 
-  exports.initialize = function initialize(_databaseId, page, callbacks) {
-    databaseId = _databaseId;
-    if (!databaseId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
-      throw new Error('The URL for this RP has changed. Go back to your dashboard.')
-    }
+  exports.initialize = function initialize(_roomid, page, callbacks) {
+    roomid = _roomid;
 
     var onready = callbacks.ready;
     var onmsg = callbacks.msg;
@@ -45,42 +34,11 @@ window.RP = (function() {
     var onpagecount = callbacks.pageCount;
     var onerror = callbacks.error;
 
-
-    initPromise = userbase.init({
-      appId: '630241a7-b753-44d0-a7de-358fe646cc27',
-      sessionLength: 365 * 24,
-    })
-    .then(function (session) {
-      if (!session.user) {
-        throw new Error('You are not logged in!')
-      }
-      myUsername = session.user.username;
-      return userbase.getDatabases({ databaseId: databaseId })
-      .then(function (results) {
-        if (results.databases.length === 0) {
-          throw new Error('RP Not Found');
-        }
-        dbArgs = results.databases[0].isOwner
-          ? { databaseName: results.databases[0].databaseName }
-          : { databaseId: databaseId }
-        auxAuthToken = session.user.authToken
-      })
-    })
-    .then(function () {
+    fetch(`/room.lua?id=${roomid}&page=${page}`)
+    .then(function (res) { return res.json() })
+    .then(function (rpinfo) {
       var rpMetaDocId = dbArgs.databaseName || dbArgs.databaseId;
       var rpMetaDoc = null
-      var metaDbOpenPromise = userbase.openDatabase({
-        databaseName: 'dashboard-cache',
-        changeHandler(changes) {
-          if (rpMetaDoc) return
-          var change = changes.find(function (change) {
-            return change.itemId === rpMetaDocId
-          })
-          if (change) {
-            rpMetaDoc = change.item
-          }
-        }
-      })
       var isFirstUpdate = true;
       // TODO: hopefully at some point, the API for Userbase will change
       // so that we get notified of the exact changes, rather than having
@@ -207,14 +165,14 @@ window.RP = (function() {
 
   exports.sendMessage = function sendMessage(data, callback, failCallback) {
     upsert('m-', data, callback, failCallback);
-    fetch(AUX_URL + '/message', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Token': auxAuthToken,
-        'X-Database-Id': databaseId,
-      },
-    })
+    // fetch(AUX_URL + '/message', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'X-Token': auxAuthToken,
+    //     'X-Database-Id': databaseId,
+    //   },
+    // })
   }
 
   exports.sendChara = function sendChara(data, callback) {
@@ -228,10 +186,6 @@ window.RP = (function() {
     }, dbArgs))
     .catch(alertError)
   }
-
-  Object.defineProperty(exports, 'myUsername', { get: function() {
-    return myUsername;
-  } });
 
   exports.getParticipantInfo = function getParticipantInfo(callback) {
     userbase.getDatabases(dbArgs).then(function (result) {
@@ -420,31 +374,31 @@ window.RP = (function() {
     a.click()
   }
 
-  exports.setupNotifications = function setupNotifications() {
-    navigator.serviceWorker.ready.then(function (registration) {
-      initPromise.then(function() {
-        registration.active.postMessage({
-          action: 'setup',
-          url: AUX_URL+'/subscribe',
-          token: auxAuthToken
-        })
-      })
-    })
-  }
+  // exports.setupNotifications = function setupNotifications() {
+  //   navigator.serviceWorker.ready.then(function (registration) {
+  //     initPromise.then(function() {
+  //       registration.active.postMessage({
+  //         action: 'setup',
+  //         url: AUX_URL+'/subscribe',
+  //         token: auxAuthToken
+  //       })
+  //     })
+  //   })
+  // }
 
-  exports.stopNotifications = function stopNotifications() {
-    navigator.serviceWorker.ready.then(function (registration) {
-      registration.pushManager.getSubscription().then(function (subscription) {
-        if (subscription) {
-          subscription.unsubscribe().then(function () {
-            registration.showNotification('Notifications stopped')
-          })
-        } else {
-          registration.showNotification('Notifications were already stopped')
-        }
-      })
-    })
-  }
+  // exports.stopNotifications = function stopNotifications() {
+  //   navigator.serviceWorker.ready.then(function (registration) {
+  //     registration.pushManager.getSubscription().then(function (subscription) {
+  //       if (subscription) {
+  //         subscription.unsubscribe().then(function () {
+  //           registration.showNotification('Notifications stopped')
+  //         })
+  //       } else {
+  //         registration.showNotification('Notifications were already stopped')
+  //       }
+  //     })
+  //   })
+  // }
 
   return exports;
 
