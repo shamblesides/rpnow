@@ -52,7 +52,7 @@ window.RP = (function() {
     })
     .then(function (session) {
       if (!session.user) {
-        throw new Error('You are not logged in!')
+        window.location.pathname = '/login.html';
       }
       myUsername = session.user.username;
       return userbase.getDatabases({ databaseId: databaseId })
