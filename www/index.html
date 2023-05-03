@@ -197,7 +197,7 @@
     <section>
       You are accepting invitations from:
       <ul id="friend-list" style="margin:auto; width:fit-content; text-align: left;">
-        <li>
+        <li id="add-friend">
           <form onsubmit="addFriend(event)">
             <input type="text" name="friend" placeholder="Friend's username">
             <button type="submit">Add</button>
@@ -291,6 +291,13 @@
       friendDbOpenPromise = userbase.openDatabase({
         databaseName: 'trusted-inviters',
         changeHandler(changes) {
+          var friendList = document.getElementById('friend-list')
+          var addFriendLi = document.getElementById('add-friend')
+          // Remove all existing items on the friend list
+          while (friendList.firstChild && friendList.firstChild !== addFriendLi) {
+            friendList.removeChild(friendList.firstChild);
+          }
+
           changes.forEach(function (change) {
             var friendUsername = change.itemId
             friendHash[friendUsername] = true
@@ -304,8 +311,7 @@
             x.style.right = '0'
             x.onclick = removeFriend.bind(null, friendUsername)
             li.appendChild(x)
-            var friendList = document.getElementById('friend-list')
-            friendList.insertBefore(li, friendList.lastElementChild)
+            friendList.insertBefore(li, addFriendLi)
           })
         }
       })
@@ -317,13 +323,11 @@
           changes.forEach(function (change) {
             metaInfo[change.itemId] = change.item
           })
-          console.log(metaInfo)
         }
       })
 
       userbase.getDatabases()
         .then(function (results) {
-          console.log(results);
           var roomInfos = []
           return friendDbOpenPromise.then(function () {
             results.databases.forEach(function (databaseMeta) {
