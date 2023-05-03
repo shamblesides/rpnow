@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="My RP">
+  <meta name="theme-color" content="#fafafa" />
   <title>Loading...</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="manifest" href="/webmanifest.webmanifest">
 </head>
 
 <body>
@@ -316,6 +316,7 @@
     }
     function darkMode(isDark) {
       document.body.classList.toggle('dark-theme', isDark);
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', isDark ? '#303030' : '#fafafa');
     }
     function quicksend(event, applySetting) {
       if (event.key !== 'Enter' || event.shiftKey) return;
