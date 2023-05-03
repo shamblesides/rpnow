@@ -99,12 +99,6 @@
       <a href="format.html" target="_blank">
         🎀 View formatting info
       </a>
-      <!-- <button onclick="openWebhookDialog()">
-        🌐 Add Discord webhook...
-      </button>
-      <button onclick="openUsernameDialog()">
-        👤 Change my username...
-      </button> -->
       <hr/>
       <details>
         <summary>📃 Download .TXT</summary>
@@ -334,20 +328,6 @@
       var title = prompt('Enter the title for this RP:', document.getElementById('title').innerText);
       if (title != null) {
         RP.changeTitle(title);
-      }
-    }
-    function openWebhookDialog() {
-      var webhook = prompt('Webhook URL, please:');
-      if (webhook) {
-        RP.addWebhook(webhook, function() {
-          alert('Webhook added successfully')
-        })
-      }
-    }
-    function openUsernameDialog() {
-      var name = prompt('What will you, the writer, be known by?');
-      if (name != null) {
-        RP.changeMyUsername(name);
       }
     }
     function openInviteDialog() {
