@@ -30,6 +30,9 @@
 
   <form id="send-box" class="chara-bg" onsubmit="sendMessage(event)" data-page="chat">
     <input type="hidden" name="type" value="text">
+    <button type="button" id="avatar-button" onclick="openAvatarDialog(event)">
+      <img width="20" height="20" />
+    </button>
     <button type="button" class="change-chara chara-name" onclick="openPopup('character-menu')"></button>
     <button type="button" class="icon-button" onclick="openPopup('image-dialog')">🖼️</button>
     <textarea name="content" rows="3" maxlength="10000" placeholder="Type your message." onkeydown="quicksend(event, true)" oninput="autosizeTextarea(event, 3, 6)" data-persist-room="sendBoxText"></textarea>
@@ -241,6 +244,33 @@
     </tr>
   </template>
 
+  <template id="avatar-dialog">
+    <div class="dialog avatar-dialog">
+      <h3>Avatars</h3>
+      <ul>
+        <li>
+          <label>
+            <input type="radio" form="send-box" name="avatar" value="" onchange="selectAvatar(this.value)">
+            None
+          </label>
+        </li>
+        <li>
+          <input type="file" required accept="image/*" multiple>
+          <button>ADD AVATAR</button>
+        </li>
+      </ul>
+    </div>
+  </template>
+
+  <template id="avatar-radio">
+    <li>
+      <label>
+        <input type="radio" form="send-box" name="avatar" onchange="selectAvatar(this.value)">
+        <img width=60>
+      </label>
+    </li>
+  </template>
+
   <script>
     function setError(error) {
       document.querySelector('aside.error').innerText = (error || '').toString();
@@ -323,6 +353,10 @@
       var form = document.querySelector('#send-box')
       form.className = 'chara-bg '+speaker;
       form.elements.who.value = speaker;
+      if (speaker.startsWith('c-')) {
+        // select the first avatar button, which will be "none"
+        document.querySelector(`.avatar-dialog.${speaker} input[type=radio]`).checked = true;
+      }
     }
     function openTitleDialog() {
       var title = prompt('Enter the title for this RP:', document.getElementById('title').innerText);
@@ -335,6 +369,10 @@
       if (username != null) {
         RP.inviteUser(username);
       }
+    }
+    function openAvatarDialog(event) {
+      var charaId = event.target.closest('form').elements.who.value;
+      openPopup(`avatar-dialog-${charaId}`);
     }
     function openParticipantsDialog() {
       openPopup('participants-dialog');
@@ -633,6 +671,20 @@
       el.querySelector('form [name=color]').defaultValue = data.color;
       return el;
     }
+    function buildAvatarDialog(charaData) {
+      var el = document.querySelector('template#avatar-dialog').content.cloneNode(true).querySelector('*');
+      el.classList.add(charaData._id)
+      el.id = `avatar-dialog-${charaData._id}`;
+      el.querySelector('h3').innerText = `Avatars - ${charaData.name}`;
+      return el;
+    }
+    function buildAvatarRadio(avatarData) {
+      var el = document.querySelector('template#avatar-radio').content.cloneNode(true).querySelector('*');
+      var radio = el.querySelector('input[type=radio]')
+      radio.value = avatarData._id;
+      el.id = `avatar-radio-${avatarData._id}`;
+      return el;
+    }
     function buildBrokenMessageElement(data) {
       var template = document.querySelector('template#msg-unknown');
       var el = template.content.cloneNode(true).querySelector('*');
@@ -672,6 +724,14 @@
         el.querySelector('form [name=who]').value = data.who;
         el.querySelector('form [name=content]').defaultValue = data.content;
         el.querySelector('blockquote').innerHTML = formatRpMessage(data.content);
+        if (data.who.startsWith('c')) {
+          data.avatar = 'https://s3.amazonaws.com/ganbreederpublic/imgs/d9040be4f39da1a55fdf.jpeg';
+        }
+        if (data.avatar) {
+          var img = document.createElement('img');
+          img.src = data.avatar;
+          el.querySelector('blockquote').prepend(img);
+        }
       } else if (data.type === 'image') {
         if (!['_id','_rev','_user','type','url'].every(function (x) { return x in data })) {
           return buildBrokenMessageElement(data)
@@ -748,7 +808,12 @@
       chara(data) {
         var style = charaStyles(data);
         addTo(style, document.head);
-        
+
+        if (!document.querySelector(`.avatar-dialog.${data._id}`)) {
+          var avatarDialog = buildAvatarDialog(data);
+          document.body.insertBefore(avatarDialog, document.getElementById('main-menu'))
+        }
+
         var menu = document.querySelector('#character-menu .drawer-body');
         if (menu) {
           var el = buildCharaButton(data);
@@ -757,6 +822,12 @@
             el.querySelector('input[type=radio]').checked = true;
           }
         }
+      },
+      avatar(data) {
+        var radio = buildAvatarRadio(data);
+        var ul = document.querySelector(`.avatar-dialog.${data._id} ul`);
+        var li = ul.querySelector('li');
+        addTo(radio, ul, li);
       },
       msg(data, isInit) {
         var wasAtBottom =
