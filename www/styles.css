@@ -624,6 +624,9 @@ main {
 }
 .dialog:not(.open) {
   top: -100vh;
+  max-height: 50vh;
+  overflow: hidden;
+  box-shadow: none;
 }
 
 
