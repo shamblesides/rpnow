@@ -14,20 +14,8 @@
   <aside class="error">JavaScript is required for this page to work!</aside>
   <script>document.querySelector('aside.error').innerText = ''</script>
   
-  <header>
-    <button onclick="openPopup('main-menu')">≡</button>
-    <h1 id="title"></h1>
-  </header>
+  <button class="main-menu-button" onclick="openPopup('main-menu')">≡</button>
   
-  <nav id="pager">
-    <a class="icon-button" id="prev-page">←</a>
-    <form>
-      <input type="hidden" name="room">
-      <select name="page" onchange="this.closest('form').submit()"></select>
-    </form>
-    <a class="icon-button" id="next-page">→</a>
-  </nav>
-
   <form id="send-box" class="chara-bg" onsubmit="sendMessage(event)" data-page="chat">
     <input type="hidden" name="type" value="text">
     <button type="button" class="change-chara chara-name" onclick="openPopup('character-menu')"></button>
@@ -64,11 +52,20 @@
 
   <section id="main-menu" class="drawer drawer-left">
     <header>
-      <h2>Menu</h2>
+      <h2 id="title">Menu</h2>
       <button class="close-button" onclick="closeMe(event)" title="Close">×</button>
     </header>
 
     <div class="drawer-body">
+      <nav class="pager">
+        <a class="icon-button prev-page">←</a>
+        <form>
+          <input type="hidden" name="room">
+          <select name="page" onchange="this.closest('form').submit()"></select>
+        </form>
+        <a class="icon-button next-page">→</a>
+      </nav>
+
       <button onclick="openInviteDialog()">
         ✉️ Invite participant...
       </button>
@@ -159,6 +156,18 @@
     </footer>
   </section>
   
+  <header id="archive-header" data-page="archive">
+    <h1>Loading...</h1>
+    <nav class="pager">
+      <a class="icon-button prev-page">←</a>
+      <form>
+        <input type="hidden" name="room">
+        <select name="page" onchange="this.closest('form').submit()"></select>
+      </form>
+      <a class="icon-button next-page">→</a>
+    </nav>
+  </header>
+  
   <main>
     <p id="loading-messages" class="notice">
       <span class="emoji">⏳</span> Loading messages...
@@ -168,6 +177,17 @@
       <p>It's time to start writing!</p>
     </div>
   </main>
+  
+  <footer id="archive-footer" data-page="archive" style="display:none">
+    <nav class="pager">
+      <a class="icon-button prev-page">←</a>
+      <form>
+        <input type="hidden" name="room">
+        <select name="page" onchange="this.closest('form').submit()"></select>
+      </form>
+      <a class="icon-button next-page">→</a>
+    </nav>
+  </footer>
   
   <div class="overlay drawer-overlay" data-what="drawer" onclick="closePopup(event)"></div>
   
@@ -506,7 +526,9 @@
     location.search.substr(1).split("&").forEach(function(x) { x=x.split('='); query[x[0]] = decodeURIComponent(x[1]) });
 
     var roomid = query['room'];
-    document.querySelector('input[type=hidden][name=room]').value = roomid;
+    Array.from(document.querySelectorAll('input[type=hidden][name=room]')).forEach(function (el) {
+      el.value = roomid;
+    });
     
     var pagenum = parseInt(query['page']) || 0;
     if (pagenum) {
@@ -696,36 +718,41 @@
       return oldEl;
     }
     function updatePageCount(pageCount) {
-      var select = document.querySelector('#pager select[name=page]');
-      var chatOptionEl;
-      if (select.childElementCount === 0) {
-        chatOptionEl = document.createElement('option');
-        chatOptionEl.value = 0;
-        chatOptionEl.innerText = 'Chat';
-        document.querySelector('#pager select').appendChild(chatOptionEl);
-      } else {
-        chatOptionEl = select.lastElementChild;
-      }
+      Array.from(document.querySelectorAll('.pager select[name=page]')).forEach(function(select) {
+        var chatOptionEl;
+        if (select.childElementCount === 0) {
+          chatOptionEl = document.createElement('option');
+          chatOptionEl.value = 0;
+          chatOptionEl.innerText = 'Chat';
+          select.appendChild(chatOptionEl);
+        } else {
+          chatOptionEl = select.lastElementChild;
+        }
 
-      for (var i = select.childElementCount; i <= pageCount; ++i) {
-        var optionEl = document.createElement('option');
-        optionEl.value = i;
-        optionEl.innerText = `Page ${i}`;
-        select.insertBefore(optionEl, chatOptionEl);
-      }
+        for (var i = select.childElementCount; i <= pageCount; ++i) {
+          var optionEl = document.createElement('option');
+          optionEl.value = i;
+          optionEl.innerText = `Page ${i}`;
+          select.insertBefore(optionEl, chatOptionEl);
+        }
 
-      select.value = pagenum;
+        select.value = pagenum;
+      });
       
-      if (pagenum === 0) {
-        document.querySelector('#pager #prev-page').href = `?room=${roomid}&page=${pageCount}`;
-      } else if (pagenum != 1) {
-        document.querySelector('#pager #prev-page').href = `?room=${roomid}&page=${pagenum-1}`;
-      }
-      if (pagenum === pageCount) {
-        document.querySelector('#pager #next-page').href = `?room=${roomid}&page=${0}`;
-      } else if (pagenum != 0) {
-        document.querySelector('#pager #next-page').href = `?room=${roomid}&page=${pagenum+1}`;
-      }
+      Array.from(document.querySelectorAll('.pager a.prev-page')).forEach(function(a) {
+        if (pagenum === 0) {
+          a.href = `?room=${roomid}&page=${pageCount}`;
+        } else if (pagenum != 1) {
+          a.href = `?room=${roomid}&page=${pagenum-1}`;
+        }
+      });
+      Array.from(document.querySelectorAll('.pager a.next-page')).forEach(function(a) {
+        if (pagenum === pageCount) {
+          a.href = `?room=${roomid}&page=${0}`;
+        } else if (pagenum != 0) {
+          a.href = `?room=${roomid}&page=${pagenum+1}`;
+        }
+      });
     }
     RP.initialize(roomid, pagenum || 0, {
       ready(isFirstUpdate) {
@@ -744,6 +771,10 @@
       title(title) {
         document.title = title;
         document.getElementById('title').innerText = title;
+        var archiveTitle = document.querySelector('#archive-header h1');
+        if (archiveTitle) {
+          archiveTitle.innerText = title;
+        }
       },
       chara(data) {
         var style = charaStyles(data);
@@ -778,6 +809,12 @@
           // if we were previously at the bottom of the page, scroll back down there
           if (wasAtBottom && !pagenum) {
             window.scrollBy(0, 999999);
+          }
+        }
+        if (pagenum) {
+          var archiveFooter = document.getElementById('archive-footer');
+          if (archiveFooter) {
+            archiveFooter.style.display = '';
           }
         }
       },
