@@ -769,10 +769,11 @@
         
         if (!isInit && !oldEl) {
           if (!pagenum) {
-            // only keep 10 msgs
-            while (main.childNodes.length > RP.CHAT_SIZE) {
-              main.firstChild.remove();
-            }
+            // only keep latest N msgs
+            var excessMessages = Array.from(main.querySelectorAll('.message')).slice(0, -RP.CHAT_SIZE);
+            excessMessages.forEach(function(msg) {
+              msg.remove();
+            });
           }
           // if we were previously at the bottom of the page, scroll back down there
           if (wasAtBottom && !pagenum) {
